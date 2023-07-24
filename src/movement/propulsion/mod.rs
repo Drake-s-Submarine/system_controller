@@ -34,9 +34,9 @@ impl Propulsion {
 }
 
 impl SubmarineModule for Propulsion {
-    fn tick(&mut self) {
+    fn tick(&mut self, tick_count: u128) {
         //self.aft_thruster.tick();
-        self.port_thruster.tick();
+        self.port_thruster.tick(tick_count);
         //self.starboard_thruster.tick();
     }
 }

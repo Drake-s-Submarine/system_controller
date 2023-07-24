@@ -18,7 +18,7 @@ impl Movement {
 }
 
 impl SubmarineModule for Movement {
-    fn tick(&mut self) {
-       self.propulsion.tick(); 
+    fn tick(&mut self, tick_count: u128) {
+       self.propulsion.tick(tick_count); 
     }
 }

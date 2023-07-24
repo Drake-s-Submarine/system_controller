@@ -32,8 +32,10 @@ impl Thruster {
 }
 
 impl SubmarineModule for Thruster {
-    fn tick(&mut self) {
+    fn tick(&mut self, tick_count: u128) {
         // 
-        self.en_pin.toggle();
+        if tick_count % 10 == 0 {
+            self.en_pin.toggle();
+        }
     }
 }
