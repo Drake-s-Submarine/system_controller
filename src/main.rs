@@ -1,3 +1,4 @@
+mod command;
 mod movement;
 mod error;
 mod traits;
@@ -7,9 +8,10 @@ use std::time::Duration;
 
 const TICK_RATE: Duration = Duration::from_millis(100);
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let mut sub = init_system().unwrap();
-    run_system(&mut sub);
+    run_system(&mut sub).await;
     stop_system();
 }
 
@@ -33,14 +35,20 @@ impl traits::SubmarineModule for Submarine {
 
 fn init_system() -> Result<Submarine, error::PeripheralInitError> {
     println!("Initializing system..");
+
+    command::start_command_listener();
+
     Submarine::new()
 }
 
-fn run_system(sub: &mut Submarine) {
+async fn run_system(sub: &mut Submarine) {
     println!("Starting system");
     let mut tick_count: u128 = 0;
     loop {
         let tick_start = std::time::Instant::now();
+
+        command::dispatch();
+
         // assert state
 
         sub.tick(tick_count);
@@ -57,5 +65,4 @@ fn run_system(sub: &mut Submarine) {
 
 fn stop_system() {
     println!("Shutting down");
-
 }
