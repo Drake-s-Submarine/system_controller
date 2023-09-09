@@ -1,6 +1,19 @@
 use tokio::net::{ UnixStream, UnixListener};
 use tokio::io::AsyncReadExt;
-use super::{ Command, Component, COMMAND_QUEUE };
+use super::{
+    Command,
+    CommandDispatchWrapper,
+    COMMAND_QUEUE,
+    Module,
+    serde::{
+        MODULE_IDS,
+        COMMAND_BUFFER_SIZE,
+        validate_command_structure,
+        Serde,
+    },
+    commands::*,
+};
+use std::mem::ManuallyDrop;
 
 pub async fn listen() {
     println!("Listening for commands.");
@@ -10,32 +23,46 @@ pub async fn listen() {
 
     loop {
         if let Ok((mut s, _)) = command_socket.accept().await {
-            ingest_commands(&mut s).await;
+            ingest_command(&mut s).await;
         }
     }
 }
 
-async fn ingest_commands(s: &mut UnixStream) {
-    let mut buf = [0; 128];
+async fn ingest_command(s: &mut UnixStream) {
+    let mut buf = [0; COMMAND_BUFFER_SIZE];
 
-    loop {
-        let len = s.read(&mut buf).await
-            .unwrap();
+    let len = s.read(&mut buf).await
+        .unwrap();
 
-        if len == 0 { println!("Empty socket"); break; }
+    if len == 0 { println!("Empty socket"); return; }
 
-        let command = match String::from_utf8_lossy(&buf[..len]).as_ref() {
-            "EnableMotor" => Command {component: Component::Motor, en: true},
-            "DisableMotor" => Command {component: Component::Motor, en: false},
-            s => {
-                eprintln!("Malformed command: {}", s);
-                break;
-            }
-        };
-
-        println!("Got command: {:?}", command);
-
-        COMMAND_QUEUE.lock().unwrap()
-            .push_back(command);
+    if !validate_command_structure(&buf) {
+        eprintln!("Invalid command structure:\n{:?}", buf);
+        return;
     }
+
+    let dispatch_command = match MODULE_IDS.get(&buf[1]) {
+        Some(m) => {
+            let payload: &[u8] = &buf[2..COMMAND_BUFFER_SIZE-1];
+            match m {
+
+                Module::Ballast => {
+                    match BallastCommand::deserialize(payload) {
+                        Ok(c) => {
+                            CommandDispatchWrapper {
+                                module: Module::Ballast,
+                                command: Command{ballast: ManuallyDrop::new(c)}
+                            }
+                        },
+                        Err(_) => return
+                    }
+                },
+                //Module::Propulsion => {}
+
+            } // match module
+        },
+        None => return,
+    };
+
+    COMMAND_QUEUE.lock().unwrap().push_back(dispatch_command);
 }

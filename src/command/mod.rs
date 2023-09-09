@@ -1,17 +1,22 @@
-mod listen;
+pub mod commands;
 mod dispatch;
+mod listen;
+mod serde;
 
 use std::collections::VecDeque;
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
 use rppal::gpio::OutputPin;
 use std::fs::remove_file;
+use commands::*;
 
-static COMMAND_QUEUE: Lazy<Mutex<VecDeque<Command>>> =
+
+static COMMAND_QUEUE: Lazy<Mutex<VecDeque<CommandDispatchWrapper>>> =
     Lazy::new(|| {
-        Mutex::new(VecDeque::from([]))
+        Mutex::new(VecDeque::new())
     });
 
+#[allow(dead_code)]
 static DEBUG_LED: Lazy<Mutex<OutputPin>> = Lazy::new(|| {
     let led = rppal::gpio::Gpio::new().unwrap()
         .get(crate::pin_map::DEBUG_LED).unwrap().into_output();
@@ -19,14 +24,17 @@ static DEBUG_LED: Lazy<Mutex<OutputPin>> = Lazy::new(|| {
 });
 
 #[derive(Debug)]
-pub struct Command {
-    component: Component,
-    pub en: bool,
+pub enum Module {
+    Ballast
 }
 
-#[derive(Debug)]
-pub enum Component {
-    Motor,
+struct CommandDispatchWrapper {
+    module: Module,
+    command: Command,
+}
+
+pub union Command {
+    ballast: std::mem::ManuallyDrop<Box<BallastCommand>>,
 }
 
 pub fn start_command_listener() {
@@ -41,7 +49,6 @@ pub fn start_command_listener() {
 pub fn dispatch(sub: &mut crate::Submarine) {
     dispatch::dispatch_next_command(sub);
 }
-
 
 //struct ToggleButton {
 //    is_on: bool,
@@ -84,5 +91,3 @@ pub fn dispatch(sub: &mut crate::Submarine) {
 //        }
 //    }
 //}
-
-

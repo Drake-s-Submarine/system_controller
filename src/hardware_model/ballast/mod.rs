@@ -2,7 +2,8 @@ use {
     crate::{
         error::PeripheralInitError,
         pin_map::BALLAST_MOTOR_PIN,
-        traits::{ Tick, SubmarineModule, SubmarineComponent },
+        traits::{ Tick, SubmarineComponent },
+        command::commands::BallastCommand,
     },
     rppal::gpio::{ OutputPin, Gpio },
 };
@@ -34,10 +35,23 @@ impl Ballast {
             })?.into_output(),
         })
     }
+
+    pub fn handle_command(
+        &mut self,
+        cmd: &BallastCommand
+    ) {
+        match cmd {
+            // TODO: intake and discharge modes
+            BallastCommand::Activate(_intake) => {
+                self.enable();
+            },
+            BallastCommand::Deactivate => self.disable()
+        }
+    }
 }
 
 impl Tick for Ballast {
-    fn tick(&mut self, tick_count: u128) {
+    fn tick(&mut self, _tick_count: u128) {
         
     }
 }
@@ -48,15 +62,5 @@ impl SubmarineComponent for Ballast {
     }
     fn disable(&mut self) {
         self.en_pin.set_low();
-    }
-}
-
-impl SubmarineModule for Ballast {
-    fn handle_command(&mut self, cmd: crate::command::Command) {
-        if cmd.en {
-            self.enable();
-        } else {
-            self.disable();
-        }
     }
 }

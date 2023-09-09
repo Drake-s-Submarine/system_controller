@@ -18,6 +18,6 @@ impl Submarine {
 
 impl Tick for Submarine {
     fn tick(&mut self, tick_count: u128) {
-
+        self.ballast.tick(tick_count);
     }
 }

@@ -1,7 +1,7 @@
 mod thruster;
 
-use thruster::Thruster;
-use crate::{ error::PeripheralInitError, traits::Tick };
+//use thruster::Thruster;
+use crate::traits::Tick;
 
 //const AFT_THRUSTER_PIN: u8 = 19;
 
@@ -18,14 +18,14 @@ pub struct Propulsion {
 //}
 
 impl Propulsion {
-    pub fn new() -> Result<Self, PeripheralInitError> {
-        Ok(Self {
+    //pub fn new() -> Result<Self, PeripheralInitError> {
+    //    Ok(Self {
             //aft_thruster: Thruster::new(crate::pin_map::AFT_THRUSTER_PIN)?,
             //aft_thruster: Thruster::new(AFT_THRUSTER_PIN)?,
             //port_thruster: Thruster::new(PORT_THRUSTER_PIN)?,
             //starboard_thruster: Thruster::new(todo!())?,
-        })
-    }
+    //    })
+    //}
 
     // Use positive Y for forward, positive X for right
     //pub fn apply_thrust(self, x:f32, y:f32) {
