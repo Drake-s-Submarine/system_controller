@@ -7,8 +7,6 @@ use once_cell::sync::Lazy;
 use rppal::gpio::OutputPin;
 use std::fs::remove_file;
 
-//const LED_PIN: u8 = 19;
-
 static COMMAND_QUEUE: Lazy<Mutex<VecDeque<Command>>> =
     Lazy::new(|| {
         Mutex::new(VecDeque::from([]))
@@ -16,14 +14,14 @@ static COMMAND_QUEUE: Lazy<Mutex<VecDeque<Command>>> =
 
 static DEBUG_LED: Lazy<Mutex<OutputPin>> = Lazy::new(|| {
     let led = rppal::gpio::Gpio::new().unwrap()
-        .get(19).unwrap().into_output();
+        .get(crate::pin_map::DEBUG_LED).unwrap().into_output();
     Mutex::new(led)
 });
 
 #[derive(Debug)]
 pub struct Command {
     component: Component,
-    en: bool,
+    pub en: bool,
 }
 
 #[derive(Debug)]
@@ -40,8 +38,8 @@ pub fn start_command_listener() {
     });
 }
 
-pub fn dispatch() {
-    dispatch::dispatch_next_command();
+pub fn dispatch(sub: &mut crate::Submarine) {
+    dispatch::dispatch_next_command(sub);
 }
 
 

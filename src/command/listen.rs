@@ -37,7 +37,5 @@ async fn ingest_commands(s: &mut UnixStream) {
 
         COMMAND_QUEUE.lock().unwrap()
             .push_back(command);
-
-        println!("{:?}", COMMAND_QUEUE);
     }
 }

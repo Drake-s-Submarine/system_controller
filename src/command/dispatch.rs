@@ -1,17 +1,14 @@
 use super::{ COMMAND_QUEUE, Component };
+use crate::traits::SubmarineModule;
 
-pub fn dispatch_next_command() {
+pub fn dispatch_next_command(sub: &mut crate::Submarine) {
     let command = COMMAND_QUEUE.lock().unwrap().pop_front();
 
     match command {
         Some(c) => {
             match c.component {
                 Component::Motor => {
-                    if c.en {
-                        super::DEBUG_LED.lock().unwrap().set_high();
-                    } else {
-                        super::DEBUG_LED.lock().unwrap().set_low();
-                    }
+                    sub.ballast.handle_command(c);
                 },
             }
         },

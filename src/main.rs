@@ -1,9 +1,11 @@
 mod command;
-mod movement;
 mod error;
+mod hardware_model;
+mod pin_map;
 mod traits;
 
-use traits::SubmarineModule;
+use traits::Tick;
+use hardware_model::Submarine;
 use std::time::Duration;
 
 const TICK_RATE: Duration = Duration::from_millis(100);
@@ -15,30 +17,13 @@ async fn main() {
     stop_system();
 }
 
-struct Submarine {
-    movement: movement::Movement,
-}
-
-impl Submarine {
-    pub fn new() -> Result<Submarine, error::PeripheralInitError> {
-        Ok(Submarine {
-            movement: movement::Movement::new()?,
-        })
-    }
-}
-
-impl traits::SubmarineModule for Submarine {
-    fn tick(&mut self, tick_count: u128) {
-        self.movement.tick(tick_count);
-    }
-}
 
 fn init_system() -> Result<Submarine, error::PeripheralInitError> {
     println!("Initializing system..");
 
     command::start_command_listener();
 
-    Submarine::new()
+    hardware_model::Submarine::new()
 }
 
 async fn run_system(sub: &mut Submarine) {
@@ -47,7 +32,7 @@ async fn run_system(sub: &mut Submarine) {
     loop {
         let tick_start = std::time::Instant::now();
 
-        command::dispatch();
+        command::dispatch(sub);
 
         // assert state
 
