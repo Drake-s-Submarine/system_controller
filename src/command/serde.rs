@@ -13,8 +13,10 @@ const COMMAND_BUFFER_END_BYTE: u8 = 0xF;
 pub const MODULE_IDS: Lazy<HashMap<u8, Module>> = Lazy::new(|| {
     let mut map: HashMap<u8, Module> = HashMap::new();
     const BALLAST_ID: u8 = 0x0;
+    const PROP_ID: u8 = 0x1;
 
     map.insert(BALLAST_ID, Module::Ballast);
+    map.insert(PROP_ID, Module::Propulsion);
 
     map
 });

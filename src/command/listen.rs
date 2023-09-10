@@ -57,7 +57,17 @@ async fn ingest_command(s: &mut UnixStream) {
                         Err(_) => return
                     }
                 },
-                //Module::Propulsion => {}
+                Module::Propulsion => {
+                    match PropulsionCommand::deserialize(payload) {
+                        Ok(c) => {
+                            CommandDispatchWrapper {
+                                module: Module::Propulsion,
+                                command: Command{propulsion: ManuallyDrop::new(c)}
+                            }
+                        },
+                        Err(_) => return
+                    }
+                },
 
             } // match module
         },

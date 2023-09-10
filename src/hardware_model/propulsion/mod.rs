@@ -1,31 +1,43 @@
 mod thruster;
 
-//use thruster::Thruster;
-use crate::traits::Tick;
-
-//const AFT_THRUSTER_PIN: u8 = 19;
+use thruster::Thruster;
+use crate::{
+    traits::Tick,
+    error::PeripheralInitError,
+    pin_map::{
+        AFT_THRUSTER_PIN,
+        PORT_THRUSTER_PIN,
+        STARBOARD_THRUSTER_PIN,
+    },
+    command::commands::{ PropulsionCommand, ThrustVector }
+};
 
 pub struct Propulsion {
-    //aft_thruster: Thruster,
-    //port_thruster: Thruster,
-    //starboard_thruster: Thruster,
-
+    aft_thruster: Thruster,
+    port_thruster: Thruster,
+    starboard_thruster: Thruster,
+    _vector: ThrustVector,
 }
 
-//pub struct ThrustVector {
-    //x: f32,
-    //y: f32,
-//}
-
 impl Propulsion {
-    //pub fn new() -> Result<Self, PeripheralInitError> {
-    //    Ok(Self {
-            //aft_thruster: Thruster::new(crate::pin_map::AFT_THRUSTER_PIN)?,
-            //aft_thruster: Thruster::new(AFT_THRUSTER_PIN)?,
-            //port_thruster: Thruster::new(PORT_THRUSTER_PIN)?,
-            //starboard_thruster: Thruster::new(todo!())?,
-    //    })
-    //}
+    pub fn new() -> Result<Self, PeripheralInitError> {
+        Ok(Self {
+            aft_thruster: Thruster::new(AFT_THRUSTER_PIN)?,
+            port_thruster: Thruster::new(PORT_THRUSTER_PIN)?,
+            starboard_thruster: Thruster::new(STARBOARD_THRUSTER_PIN)?,
+            _vector: ThrustVector{x: 0.0, y: 0.0},
+        })
+    }
+
+    pub fn handle_command(&mut self, cmd: &PropulsionCommand) {
+        println!("{:?}", cmd);
+
+        // check vec for sensical values
+        // conver magnitude and direction into pwm for each thruster
+
+
+
+    }
 
     // Use positive Y for forward, positive X for right
     //pub fn apply_thrust(self, x:f32, y:f32) {
@@ -65,13 +77,9 @@ impl Propulsion {
 }
 
 impl Tick for Propulsion {
-    fn tick(&mut self, _tick_count: u128) {
-        //self.aft_thruster.tick();
-        //self.port_thruster.tick(tick_count);
-        //self.starboard_thruster.tick();
+    fn tick(&mut self, tick_count: u128) {
+        self.aft_thruster.tick(tick_count);
+        self.port_thruster.tick(tick_count);
+        self.starboard_thruster.tick(tick_count);
     }
 }
-
-//impl ThrustVector {
-
-//}

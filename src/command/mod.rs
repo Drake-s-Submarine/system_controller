@@ -25,7 +25,8 @@ static DEBUG_LED: Lazy<Mutex<OutputPin>> = Lazy::new(|| {
 
 #[derive(Debug)]
 pub enum Module {
-    Ballast
+    Ballast,
+    Propulsion,
 }
 
 struct CommandDispatchWrapper {
@@ -35,6 +36,7 @@ struct CommandDispatchWrapper {
 
 pub union Command {
     ballast: std::mem::ManuallyDrop<Box<BallastCommand>>,
+    propulsion: std::mem::ManuallyDrop<Box<PropulsionCommand>>,
 }
 
 pub fn start_command_listener() {
