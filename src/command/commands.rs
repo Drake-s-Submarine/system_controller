@@ -1,4 +1,5 @@
 use super::serde;
+use crate::definitions::DirectionVector;
 
 #[derive(Debug)]
 pub enum BallastCommand {
@@ -17,22 +18,15 @@ impl serde::Serde for BallastCommand {
             0 => Ok(Box::new(BallastCommand::Deactivate)),
             1 => Ok(Box::new(BallastCommand::Activate(true))),
             2 => Ok(Box::new(BallastCommand::Activate(false))),
-            _ => return Err(())
+            _ => Err(())
         }
     }
 }
 
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum PropulsionCommand {
-    SetThrust(ThrustVector),
-}
-
-// TODO: This doesn't seem like the right place for this
-#[derive(Debug)]
-pub struct ThrustVector {
-    pub x: f32,
-    pub y: f32,
+    SetThrust(DirectionVector),
 }
 
 //   x: f32   y: f32   unused
@@ -57,7 +51,7 @@ impl serde::Serde for PropulsionCommand {
         let x_component: f32 = f32::from_le_bytes(x_component);
         let y_component: f32 = f32::from_le_bytes(y_component);
 
-        Ok(Box::new(PropulsionCommand::SetThrust(ThrustVector {
+        Ok(Box::new(PropulsionCommand::SetThrust(DirectionVector {
             x: x_component,
             y: y_component,
         })))

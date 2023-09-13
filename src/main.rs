@@ -1,4 +1,5 @@
 mod command;
+mod definitions;
 mod error;
 mod hardware_model;
 mod pin_map;
@@ -8,7 +9,7 @@ use traits::Tick;
 use hardware_model::Submarine;
 use std::time::Duration;
 
-const TICK_RATE: Duration = Duration::from_millis(100);
+const TICK_RATE: Duration = Duration::from_millis(10);
 
 #[tokio::main]
 async fn main() {
