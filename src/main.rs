@@ -2,6 +2,7 @@ mod command;
 mod definitions;
 mod error;
 mod hardware_model;
+mod metrics;
 mod pin_map;
 mod traits;
 
@@ -34,18 +35,16 @@ async fn run_system(sub: &mut Submarine) {
         let tick_start = std::time::Instant::now();
 
         command::dispatch(sub);
-
-        // assert state
-
         sub.tick(tick_count);
+
+        tick_count += 1;
 
         let tick_end = std::time::Instant::now();
         let tick_delta = tick_end.duration_since(tick_start);
         let delay = TICK_RATE.checked_sub(tick_delta)
             .get_or_insert(Duration::ZERO).clone();
-        std::thread::sleep(delay);
 
-        tick_count += 1;
+        std::thread::sleep(delay);
     }
 }
 
