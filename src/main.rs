@@ -9,6 +9,8 @@ mod traits;
 use traits::Tick;
 use hardware_model::Submarine;
 use std::time::Duration;
+use std::sync::{ Arc, atomic::{ AtomicBool, Ordering} };
+use ctrlc;
 
 const TICK_RATE: Duration = Duration::from_millis(100);
 
@@ -31,7 +33,16 @@ fn init_system() -> Result<Submarine, error::PeripheralInitError> {
 async fn run_system(sub: &mut Submarine) {
     println!("Starting system");
     let mut tick_count: u128 = 0;
-    loop {
+    let run_system: Arc<AtomicBool> = 
+        Arc::new(AtomicBool::new(true));
+    let run_system_sigint = run_system.clone();
+
+    ctrlc::set_handler(move || {
+        run_system_sigint.store(false, Ordering::SeqCst);
+    })
+    .expect("Failed to set up SIGINT handler.");
+
+    while run_system.load(Ordering::SeqCst) {
         let tick_start = std::time::Instant::now();
 
         command::dispatch(sub);
