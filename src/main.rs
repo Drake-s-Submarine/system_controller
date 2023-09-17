@@ -21,7 +21,6 @@ async fn main() {
     stop_system();
 }
 
-
 fn init_system() -> Result<Submarine, error::PeripheralInitError> {
     println!("Initializing system..");
 

@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
 use super::Module;
+use std::sync::Arc;
+
 /*
  *  [(start_byte)(module_id_byte)(payload..)(TODO: checksum)(end_byte)]
  */
@@ -24,7 +26,7 @@ pub const MODULE_IDS: Lazy<HashMap<u8, Module>> = Lazy::new(|| {
 pub trait Serde {
     fn deserialize(
         command_payload: &[u8]
-    ) -> Result<Box<Self>, ()>;
+    ) -> Result<Arc<Self>, ()>;
 }
 
 pub fn validate_command_structure(

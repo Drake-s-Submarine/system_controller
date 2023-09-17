@@ -1,7 +1,8 @@
 use super::serde;
 use crate::definitions::DirectionVector;
+use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum BallastCommand {
     Idle,
     Intake,
@@ -13,11 +14,11 @@ pub enum BallastCommand {
 impl serde::Serde for BallastCommand {
     fn deserialize(
         command_payload: &[u8]
-    ) -> Result<Box<Self>, ()> {
+    ) -> Result<Arc<Self>, ()> {
         match command_payload[0] {
-            0 => Ok(Box::new(BallastCommand::Idle)),
-            1 => Ok(Box::new(BallastCommand::Intake)),
-            2 => Ok(Box::new(BallastCommand::Discharge)),
+            0 => Ok(Arc::new(BallastCommand::Idle)),
+            1 => Ok(Arc::new(BallastCommand::Intake)),
+            2 => Ok(Arc::new(BallastCommand::Discharge)),
             _ => Err(())
         }
     }
@@ -34,7 +35,7 @@ pub enum PropulsionCommand {
 impl serde::Serde for PropulsionCommand {
     fn deserialize(
         command_payload: &[u8]
-    ) -> Result<Box<Self>, ()> {
+    ) -> Result<Arc<Self>, ()> {
         let mut x_component: [u8; 4] = [0; 4];
         let mut y_component: [u8; 4] = [0; 4];
 
@@ -51,7 +52,7 @@ impl serde::Serde for PropulsionCommand {
         let x_component: f32 = f32::from_le_bytes(x_component);
         let y_component: f32 = f32::from_le_bytes(y_component);
 
-        Ok(Box::new(PropulsionCommand::SetThrust(DirectionVector {
+        Ok(Arc::new(PropulsionCommand::SetThrust(DirectionVector {
             x: x_component,
             y: y_component,
         })))
