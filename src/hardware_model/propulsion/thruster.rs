@@ -2,7 +2,8 @@ use rppal::pwm::{ Pwm, Channel, Polarity };
 use crate::error::PeripheralInitError;
 use crate::traits::{ Tick, SubmarineComponent };
 
-const STEP_LIMIT: f64 = 0.01;
+const STEP_UP_LIMIT: f64 = 0.05;
+const STEP_DOWN_LIMIT: f64 = 0.25;
 
 pub struct Thruster {
     // TODO: Probably use pwm so thrust can be varied
@@ -53,14 +54,14 @@ impl Tick for Thruster {
         let current_duty_cycle = self.control_pin.duty_cycle().unwrap();
         let delta = self.target_duty_cycle - current_duty_cycle;
         let new_duty_cycle = if delta > 0.0 + f64::EPSILON {
-            let dc = current_duty_cycle + STEP_LIMIT;
+            let dc = current_duty_cycle + STEP_UP_LIMIT;
             if dc > self.target_duty_cycle {
                 self.target_duty_cycle
             } else {
                 dc
             }
         } else if delta < 0.0 - f64::EPSILON {
-            let dc = current_duty_cycle - STEP_LIMIT;
+            let dc = current_duty_cycle - STEP_DOWN_LIMIT;
             if dc < self.target_duty_cycle {
                 self.target_duty_cycle
             } else {
