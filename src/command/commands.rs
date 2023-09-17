@@ -3,21 +3,21 @@ use crate::definitions::DirectionVector;
 
 #[derive(Debug)]
 pub enum BallastCommand {
-    // 1: intake mode, 0: discharge
-    Activate(bool),
-    Deactivate,
+    Idle,
+    Intake,
+    Discharge,
 }
 
-// One byte: 0: disable, 1: intake mode, 2: discharge mode
+// One byte: 0: stop, 1: intake mode, 2: discharge mode
 // [ [] [][][][][][][][][][][] ]
 impl serde::Serde for BallastCommand {
     fn deserialize(
         command_payload: &[u8]
     ) -> Result<Box<Self>, ()> {
         match command_payload[0] {
-            0 => Ok(Box::new(BallastCommand::Deactivate)),
-            1 => Ok(Box::new(BallastCommand::Activate(true))),
-            2 => Ok(Box::new(BallastCommand::Activate(false))),
+            0 => Ok(Box::new(BallastCommand::Idle)),
+            1 => Ok(Box::new(BallastCommand::Intake)),
+            2 => Ok(Box::new(BallastCommand::Discharge)),
             _ => Err(())
         }
     }
