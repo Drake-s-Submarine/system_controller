@@ -32,7 +32,6 @@ impl Propulsion {
             // TODO: check vec for sensical values
             PropulsionCommand::SetThrust(v) => self.vector = v.to_owned()
         }
-        // convert magnitude and direction into pwm for each thruster
     }
 
     fn set_forward_thrust(&mut self) {
@@ -41,10 +40,13 @@ impl Propulsion {
     }
 
     fn set_yaw_thrust(&mut self) {
-        let magnitude = f32::abs(self.vector.x);
-        
-        // TODO: set port or sb
-        self.yaw_thrust.set_port_thrust(magnitude);
+        let magnitude = self.vector.x.abs();
+
+        if self.vector.x > 0.0 {
+            self.yaw_thrust.set_port_thrust(magnitude);
+        } else {
+            self.yaw_thrust.set_starboard_thrust(magnitude);
+        }
     }
 }
 

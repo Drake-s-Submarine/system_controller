@@ -9,6 +9,7 @@ pub struct Thruster {
     // TODO: Probably use pwm so thrust can be varied
     control_pin: Pwm,
     target_duty_cycle: f64,
+    enabled: bool,
 }
 
 impl Thruster {
@@ -19,6 +20,7 @@ impl Thruster {
                     message: format!("Failed to get thruster pin as pwm: {}", e)
                 })?,
             target_duty_cycle: 0.0,
+            enabled: true,
         })
     }
 
@@ -37,17 +39,16 @@ impl Thruster {
 
 impl SubmarineComponent for Thruster {
     fn enable(&mut self) {
-        self.control_pin.enable().unwrap();
+        self.enabled = true;
     }
     fn disable(&mut self) {
-        self.control_pin.set_duty_cycle(0.0).unwrap();
-        self.control_pin.disable().unwrap();
+        self.enabled = false;
     }
 }
 
 impl Tick for Thruster {
     fn tick(&mut self, _tick_count: u128) {
-        if !self.control_pin.is_enabled().unwrap() {
+        if !self.enabled {
             return;
         }
 
