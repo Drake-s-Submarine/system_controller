@@ -6,10 +6,18 @@ use crate::{
     pin_map::PROP_YAW_SWITCH_PIN,
 };
 
+#[derive(Debug, PartialEq, Eq)]
+enum ActiveThruster {
+    Port,
+    Starboard,
+    None,
+}
+
 pub struct YawThrust {
     yaw_switch: OutputPin,
     port_thruster: Thruster,
     starboard_thruster: Thruster,
+    active_thruster: ActiveThruster,
 }
 
 impl YawThrust {
@@ -34,6 +42,7 @@ impl YawThrust {
             })?.into_output(),
             port_thruster: Thruster::new(pwm_channel)?,
             starboard_thruster: Thruster::new(pwm_channel)?,
+            active_thruster: ActiveThruster::None,
         })
     }
 
@@ -42,7 +51,12 @@ impl YawThrust {
         self.port_thruster.enable();
         self.starboard_thruster.disable();
 
-        self.port_thruster.set_duty_cycle(magnitude);
+        self.port_thruster.set_target_duty_cycle(magnitude);
+
+        if self.active_thruster != ActiveThruster::Port {
+            self.port_thruster.set_duty_cycle(0.0);
+            self.active_thruster = ActiveThruster::Port;
+        }
     }
 
     pub fn set_starboard_thrust(&mut self, magnitude: f32) {
@@ -50,7 +64,12 @@ impl YawThrust {
         self.port_thruster.disable();
         self.starboard_thruster.enable();
 
-        self.starboard_thruster.set_duty_cycle(magnitude);
+        self.starboard_thruster.set_target_duty_cycle(magnitude);
+
+        if self.active_thruster != ActiveThruster::Starboard {
+            self.starboard_thruster.set_duty_cycle(0.0);
+            self.active_thruster = ActiveThruster::Starboard;
+        }
     }
 }
 

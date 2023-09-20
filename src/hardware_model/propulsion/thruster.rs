@@ -24,7 +24,7 @@ impl Thruster {
         })
     }
 
-    pub fn set_duty_cycle(&mut self, duty_cycle: f32) {
+    pub fn set_target_duty_cycle(&mut self, duty_cycle: f32) {
         let mut duty_cycle = f64::from(duty_cycle);
         if duty_cycle > 1.0 {
             duty_cycle = 1.0;
@@ -35,6 +35,16 @@ impl Thruster {
         self.target_duty_cycle = duty_cycle;
     }
 
+    pub fn set_duty_cycle(&mut self, duty_cycle: f32) {
+        let mut duty_cycle = f64::from(duty_cycle);
+        if duty_cycle > 1.0 {
+            duty_cycle = 1.0;
+        } else if duty_cycle < 0.0 {
+            duty_cycle = 0.0;
+        }
+
+        self.control_pin.set_duty_cycle(duty_cycle).unwrap();
+    }
 }
 
 impl SubmarineComponent for Thruster {

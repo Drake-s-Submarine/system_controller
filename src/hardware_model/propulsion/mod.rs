@@ -36,7 +36,7 @@ impl Propulsion {
 
     fn set_forward_thrust(&mut self) {
         let magnitude = self.vector.y;
-        self.aft_thruster.set_duty_cycle(magnitude);
+        self.aft_thruster.set_target_duty_cycle(magnitude);
     }
 
     fn set_yaw_thrust(&mut self) {
