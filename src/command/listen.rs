@@ -41,7 +41,7 @@ async fn ingest_command(s: &mut UnixStream) {
         return;
     }
 
-    let dispatch_command = match MODULE_IDS.get(&buf[1]) {
+    let dispatchable_command = match MODULE_IDS.get(&buf[1]) {
         Some(m) => {
             let payload: &[u8] = &buf[2..COMMAND_BUFFER_SIZE-1];
             match m {
@@ -53,6 +53,18 @@ async fn ingest_command(s: &mut UnixStream) {
                                 module: Module::Ballast,
                                 command: Command{ballast: ManuallyDrop::new(c)}
                             }
+                        },
+                        Err(_) => return
+                    }
+                },
+                Module::Light => {
+                    match LightCommand::deserialize(payload) {
+                        Ok(c) => {
+                            CommandDispatchWrapper {
+                                module: Module::Light,
+                                command: Command{light: ManuallyDrop::new(c)}
+                            }
+
                         },
                         Err(_) => return
                     }
@@ -74,5 +86,5 @@ async fn ingest_command(s: &mut UnixStream) {
         None => return,
     };
 
-    COMMAND_QUEUE.lock().unwrap().push_back(dispatch_command);
+    COMMAND_QUEUE.lock().unwrap().push_back(dispatchable_command);
 }

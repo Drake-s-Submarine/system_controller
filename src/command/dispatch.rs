@@ -15,6 +15,14 @@ pub fn dispatch_next_command(sub: &mut crate::Submarine) {
 
                     sub.ballast.handle_command(cmd.as_ref());
                 },
+                Module::Light => {
+                    let cmd =
+                        std::mem::ManuallyDrop::into_inner(
+                            unsafe{w.command.light}
+                        );
+
+                    sub.light.handle_command(cmd.as_ref());
+                },
                 Module::Propulsion => {
                     let cmd =
                         std::mem::ManuallyDrop::into_inner(

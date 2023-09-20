@@ -58,3 +58,25 @@ impl serde::Serde for PropulsionCommand {
         })))
     }
 }
+
+#[derive(Copy, Clone, Debug)]
+pub enum LightCommand {
+    On,
+    Off,
+    Blink,
+}
+
+// One byte: 0: Off, 1: On, 2: Blink
+// [ [] [][][][][][][][][][][] ]
+impl serde::Serde for LightCommand {
+    fn deserialize(
+        command_payload: &[u8]
+    ) -> Result<Arc<Self>, ()> {
+        match command_payload[0] {
+            0 => Ok(Arc::new(LightCommand::Off)),
+            1 => Ok(Arc::new(LightCommand::On)),
+            2 => Ok(Arc::new(LightCommand::Blink)),
+            _ => Err(())
+        }
+    }
+}

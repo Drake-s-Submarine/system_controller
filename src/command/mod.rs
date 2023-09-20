@@ -26,6 +26,7 @@ static DEBUG_LED: Lazy<Mutex<OutputPin>> = Lazy::new(|| {
 #[derive(Debug)]
 pub enum Module {
     Ballast,
+    Light,
     Propulsion,
 }
 
@@ -36,6 +37,7 @@ struct CommandDispatchWrapper {
 
 pub union Command {
     ballast: std::mem::ManuallyDrop<Arc<BallastCommand>>,
+    light: std::mem::ManuallyDrop<Arc<LightCommand>>,
     propulsion: std::mem::ManuallyDrop<Arc<PropulsionCommand>>,
 }
 
