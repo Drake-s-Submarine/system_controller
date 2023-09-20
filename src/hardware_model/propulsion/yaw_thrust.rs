@@ -71,6 +71,13 @@ impl YawThrust {
             self.active_thruster = ActiveThruster::Starboard;
         }
     }
+
+    #[allow(dead_code)]
+    pub fn stop(&mut self) {
+        self.port_thruster.disable();
+        self.starboard_thruster.disable();
+        self.active_thruster = ActiveThruster::None;
+    }
 }
 
 impl Tick for YawThrust {
