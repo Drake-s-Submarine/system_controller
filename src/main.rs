@@ -4,7 +4,6 @@ mod definitions;
 mod error;
 mod hardware_model;
 mod metrics;
-mod pin_map;
 mod traits;
 
 use traits::Tick;
@@ -20,20 +19,23 @@ async fn main() {
     stop_system();
 }
 
-fn init_system() -> Result<(Submarine, config::System), error::PeripheralInitError> {
+fn init_system() -> Result<
+    (Submarine, config::SystemConfig),
+    error::PeripheralInitError
+> {
     println!("Initializing system..");
-
-    command::start_command_listener();
     let config = config::Config::load();
 
-    Ok((hardware_model::Submarine::new()?, config.system))
+    command::start_command_listener(&config.commanding);
+
+    Ok((hardware_model::Submarine::new(&config.hardware)?, config.system))
 }
 
 async fn run_system(sub: &mut Submarine, tick_rate: u8) {
     println!("Starting system");
     let mut tick_count: u128 = 0;
-    let tick_interval: Duration = Duration::from_millis(1000/tick_rate as u64);
-    println!("TICK INTERVAL: {:#?}", tick_interval);
+    let tick_interval: Duration =
+        Duration::from_millis(1000/tick_rate as u64);
     let run_system: Arc<AtomicBool> = 
         Arc::new(AtomicBool::new(true));
     let run_system_sigint = run_system.clone();

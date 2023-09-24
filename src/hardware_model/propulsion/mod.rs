@@ -7,6 +7,7 @@ use crate::{
     traits::Tick,
     error::PeripheralInitError,
     command::commands::PropulsionCommand,
+    config::hardware::propulsion::PropulsionConfig,
     definitions::DirectionVector,
 };
 
@@ -17,9 +18,9 @@ pub struct Propulsion {
 }
 
 impl Propulsion {
-    pub fn new() -> Result<Self, PeripheralInitError> {
+    pub fn new(config: &PropulsionConfig) -> Result<Self, PeripheralInitError> {
         Ok(Self {
-            yaw_thrust: YawThrust::new(rppal::pwm::Channel::Pwm1)?,
+            yaw_thrust: YawThrust::new(rppal::pwm::Channel::Pwm1, config)?,
             aft_thruster: Thruster::new(rppal::pwm::Channel::Pwm0)?,
             vector: DirectionVector{x: 0.0, y: 0.0},
         })
