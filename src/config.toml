@@ -1,0 +1,2 @@
+[system]
+tick_rate = 10 # how many times per second to tick
