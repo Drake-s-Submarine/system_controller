@@ -1,9 +1,10 @@
 use {
     crate::{
         error::PeripheralInitError,
-        pin_map::{ BALLAST_INTAKE_PIN, BALLAST_DISCHARGE_PIN },
+        //pin_map::{ BALLAST_INTAKE_PIN, BALLAST_DISCHARGE_PIN },
         traits::Tick,
         command::commands::BallastCommand,
+        config::hardware::ballast::BallastConfig,
     },
     rppal::gpio::{ OutputPin, Gpio },
 };
@@ -24,21 +25,21 @@ pub struct Ballast {
 }
 
 impl Ballast {
-    pub fn new() -> Result<Self, PeripheralInitError> {
+    pub fn new(config: &BallastConfig) -> Result<Self, PeripheralInitError> {
         Ok(Self {
             discharge_mode_pin: Gpio::new().map_err(|e| {
                 PeripheralInitError{
                     message: format!(
                         "Failed to init Gpio for pin {}: {}",
-                        BALLAST_DISCHARGE_PIN,
+                        config.gpio.discharge_pin,
                         e.to_string()
                     )
                 }
-            })?.get(BALLAST_DISCHARGE_PIN).map_err(|e| {
+            })?.get(config.gpio.discharge_pin).map_err(|e| {
                 PeripheralInitError {
                     message: format!(
                         "Failed to get gpio pin {}: {}",
-                        BALLAST_DISCHARGE_PIN,
+                        config.gpio.discharge_pin,
                         e.to_string()
                     )
                 }
@@ -48,15 +49,15 @@ impl Ballast {
                 PeripheralInitError{
                     message: format!(
                         "Failed to init Gpio for pin {}: {}",
-                        BALLAST_INTAKE_PIN,
+                        config.gpio.intake_pin,
                         e.to_string()
                     )
                 }
-            })?.get(BALLAST_INTAKE_PIN).map_err(|e| {
+            })?.get(config.gpio.intake_pin).map_err(|e| {
                 PeripheralInitError {
                     message: format!(
                         "Failed to get gpio pin {}: {}",
-                        BALLAST_INTAKE_PIN,
+                        config.gpio.intake_pin,
                         e.to_string()
                     )
                 }

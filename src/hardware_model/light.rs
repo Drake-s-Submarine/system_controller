@@ -1,8 +1,8 @@
 use rppal::gpio::{ OutputPin, Gpio };
 use crate::{
     command::commands::LightCommand,
+    config::hardware::light::LightConfig,
     error::PeripheralInitError,
-    pin_map::LIGHT_PIN,
     traits::Tick,
 };
 
@@ -18,21 +18,21 @@ pub struct Light {
 }
 
 impl Light {
-    pub fn new() -> Result<Self, PeripheralInitError> {
+    pub fn new(config: &LightConfig) -> Result<Self, PeripheralInitError> {
         Ok(Self{
             en_pin: Gpio::new().map_err(|e| {
                 PeripheralInitError{
                     message: format!(
                         "Failed to init Gpio for pin {}: {}",
-                        LIGHT_PIN,
+                        config.gpio.light_pin,
                         e.to_string()
                     )
                 }
-            })?.get(LIGHT_PIN).map_err(|e| {
+            })?.get(config.gpio.light_pin).map_err(|e| {
                 PeripheralInitError {
                     message: format!(
                         "Failed to get gpio pin {}: {}",
-                        LIGHT_PIN,
+                        config.gpio.light_pin,
                         e.to_string()
                     )
                 }

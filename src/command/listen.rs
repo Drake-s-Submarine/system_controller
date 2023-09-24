@@ -15,10 +15,10 @@ use super::{
 };
 use std::mem::ManuallyDrop;
 
-pub async fn listen() {
+pub async fn listen(socket: &str) {
     println!("Listening for commands.");
     let command_socket: UnixListener = 
-        UnixListener::bind("/tmp/sub_cmd_socket")
+        UnixListener::bind(socket)
         .expect("Failed to get command socket.");
 
     loop {

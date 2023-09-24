@@ -6,22 +6,15 @@ mod serde;
 use std::collections::VecDeque;
 use std::sync::{ Arc, Mutex };
 use once_cell::sync::Lazy;
-use rppal::gpio::OutputPin;
 use std::fs::remove_file;
 use commands::*;
+use crate::config::CommandingConfig;
 
 
 static COMMAND_QUEUE: Lazy<Arc<Mutex<VecDeque<CommandDispatchWrapper>>>> =
     Lazy::new(|| {
         Arc::new(Mutex::new(VecDeque::new()))
     });
-
-#[allow(dead_code)]
-static DEBUG_LED: Lazy<Mutex<OutputPin>> = Lazy::new(|| {
-    let led = rppal::gpio::Gpio::new().unwrap()
-        .get(crate::pin_map::DEBUG_LED).unwrap().into_output();
-    Mutex::new(led)
-});
 
 #[derive(Debug)]
 pub enum Module {
@@ -41,12 +34,13 @@ pub union Command {
     propulsion: std::mem::ManuallyDrop<Arc<PropulsionCommand>>,
 }
 
-pub fn start_command_listener() {
-    let _ = remove_file("/tmp/sub_cmd_socket");
+pub fn start_command_listener(config: &CommandingConfig) {
+    let socket = config.socket.clone();
+    let _ = remove_file(socket.as_str());
 
     tokio::spawn(async move {
         println!("Spawning command listener thread.");
-        listen::listen().await;
+        listen::listen(socket.as_str()).await;
     });
 }
 

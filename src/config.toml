@@ -1,2 +1,20 @@
 [system]
 tick_rate = 10 # how many times per second to tick
+
+[commanding]
+socket = "/tmp/sub_cmd_socket"
+
+
+# Hardware model configuration
+[hardware.ballast.gpio]
+intake_pin = 5
+discharge_pin = 6
+
+[hardware.debug.gpio]
+debug_led_pin = 19
+
+[hardware.light.gpio]
+light_pin = 21
+
+[hardware.propulsion.gpio]
+yaw_switch_pin = 26

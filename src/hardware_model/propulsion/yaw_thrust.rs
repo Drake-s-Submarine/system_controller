@@ -3,7 +3,8 @@ use rppal::{ gpio::{ Gpio, OutputPin }, pwm::Channel };
 use crate::{
     traits::{ Tick, SubmarineComponent },
     error::PeripheralInitError,
-    pin_map::PROP_YAW_SWITCH_PIN,
+    config::hardware::propulsion::PropulsionConfig,
+    //pin_map::PROP_YAW_SWITCH_PIN,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -21,21 +22,21 @@ pub struct YawThrust {
 }
 
 impl YawThrust {
-    pub fn new(pwm_channel: Channel) -> Result<Self, PeripheralInitError> {
+    pub fn new(pwm_channel: Channel, config: &PropulsionConfig) -> Result<Self, PeripheralInitError> {
         Ok(Self {
             yaw_switch: Gpio::new().map_err(|e| {
                 PeripheralInitError{
                     message: format!(
                         "Failed to init Gpio for pin {}: {}",
-                        PROP_YAW_SWITCH_PIN,
+                        config.gpio.yaw_switch_pin,
                         e.to_string()
                     )
                 }
-            })?.get(PROP_YAW_SWITCH_PIN).map_err(|e| {
+            })?.get(config.gpio.yaw_switch_pin).map_err(|e| {
                 PeripheralInitError {
                     message: format!(
                         "Failed to get gpio pin {}: {}",
-                        PROP_YAW_SWITCH_PIN,
+                        config.gpio.yaw_switch_pin,
                         e.to_string()
                     )
                 }

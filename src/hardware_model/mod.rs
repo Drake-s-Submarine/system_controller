@@ -2,7 +2,7 @@ mod ballast;
 mod light;
 mod propulsion;
 
-use crate::traits::Tick;
+use crate::{ traits::Tick, config::hardware::HardwareConfig };
 use ballast::Ballast;
 use light::Light;
 use propulsion::Propulsion;
@@ -14,11 +14,13 @@ pub struct Submarine {
 }
 
 impl Submarine {
-    pub fn new() -> Result<Submarine, crate::error::PeripheralInitError> {
+    pub fn new(config: &HardwareConfig)
+        -> Result<Submarine, crate::error::PeripheralInitError>
+    {
         Ok(Submarine {
-            ballast: Ballast::new()?,
-            light: Light::new()?,
-            propulsion: Propulsion::new()?,
+            ballast: Ballast::new(&config.ballast)?,
+            light: Light::new(&config.light)?,
+            propulsion: Propulsion::new(&config.propulsion)?,
         })
     }
 }
