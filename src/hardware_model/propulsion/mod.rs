@@ -21,7 +21,7 @@ impl Propulsion {
     pub fn new(config: &PropulsionConfig) -> Result<Self, PeripheralInitError> {
         Ok(Self {
             yaw_thrust: YawThrust::new(rppal::pwm::Channel::Pwm1, config)?,
-            aft_thruster: Thruster::new(rppal::pwm::Channel::Pwm0)?,
+            aft_thruster: Thruster::new(rppal::pwm::Channel::Pwm0, config)?,
             vector: DirectionVector{x: 0.0, y: 0.0},
         })
     }

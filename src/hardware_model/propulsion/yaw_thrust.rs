@@ -40,8 +40,8 @@ impl YawThrust {
                     )
                 }
             })?.into_output(),
-            port_thruster: Thruster::new(pwm_channel)?,
-            starboard_thruster: Thruster::new(pwm_channel)?,
+            port_thruster: Thruster::new(pwm_channel, config)?,
+            starboard_thruster: Thruster::new(pwm_channel, config)?,
             active_thruster: ActiveThruster::None,
         })
     }

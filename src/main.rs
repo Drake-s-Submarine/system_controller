@@ -25,7 +25,6 @@ fn init_system() -> Result<
 > {
     println!("Initializing system..");
     let config = config::Config::load();
-
     command::start_command_listener(&config.commanding);
 
     Ok((hardware_model::Submarine::new(&config.hardware)?, config.system))

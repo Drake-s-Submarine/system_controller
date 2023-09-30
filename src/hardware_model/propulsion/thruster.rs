@@ -1,19 +1,19 @@
 use rppal::pwm::{ Pwm, Channel, Polarity };
 use crate::error::PeripheralInitError;
 use crate::traits::{ Tick, SubmarineComponent };
-
-const STEP_UP_LIMIT: f64 = 0.05;
-const STEP_DOWN_LIMIT: f64 = 0.25;
+use crate::config::hardware::propulsion::PropulsionConfig;
 
 pub struct Thruster {
     // TODO: Probably use pwm so thrust can be varied
     control_pin: Pwm,
     target_duty_cycle: f64,
     enabled: bool,
+    step_down_limit: f64,
+    step_up_limit: f64,
 }
 
 impl Thruster {
-    pub fn new(channel: Channel) -> Result<Self, PeripheralInitError> {
+    pub fn new(channel: Channel, conf: &PropulsionConfig) -> Result<Self, PeripheralInitError> {
         Ok(Self {
             control_pin: Pwm::with_frequency(channel, 50000.0, 0.25, Polarity::Normal, true)
                 .map_err(|e| PeripheralInitError{
@@ -21,6 +21,8 @@ impl Thruster {
                 })?,
             target_duty_cycle: 0.0,
             enabled: true,
+            step_down_limit: conf.thrust_step_down,
+            step_up_limit: conf.thrust_step_up,
         })
     }
 
@@ -65,14 +67,14 @@ impl Tick for Thruster {
         let current_duty_cycle = self.control_pin.duty_cycle().unwrap();
         let delta = self.target_duty_cycle - current_duty_cycle;
         let new_duty_cycle = if delta > 0.0 + f64::EPSILON {
-            let dc = current_duty_cycle + STEP_UP_LIMIT;
+            let dc = current_duty_cycle + self.step_up_limit;
             if dc > self.target_duty_cycle {
                 self.target_duty_cycle
             } else {
                 dc
             }
         } else if delta < 0.0 - f64::EPSILON {
-            let dc = current_duty_cycle - STEP_DOWN_LIMIT;
+            let dc = current_duty_cycle - self.step_down_limit;
             if dc < self.target_duty_cycle {
                 self.target_duty_cycle
             } else {

@@ -16,5 +16,9 @@ debug_led_pin = 19
 [hardware.light.gpio]
 light_pin = 21
 
+[hardware.propulsion]
+thrust_step_up = 0.05
+thrust_step_down = 0.25
+
 [hardware.propulsion.gpio]
 yaw_switch_pin = 26
