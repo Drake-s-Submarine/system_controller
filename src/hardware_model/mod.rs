@@ -24,7 +24,7 @@ impl Submarine {
             ballast: Ballast::new(&config.ballast)?,
             light: Light::new(&config.light)?,
             propulsion: Propulsion::new(&config.propulsion)?,
-            dht11: Dht11::new(&config.temperature)?,
+            dht11: Dht11::new(&config.dht11)?,
         })
     }
 }

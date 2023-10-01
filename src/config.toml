@@ -13,10 +13,10 @@ discharge_pin = 6
 [hardware.debug.gpio]
 debug_led_pin = 19
 
-[hardware.temperature]
+[hardware.dht11]
 sample_interval = 10
 
-[hardware.temperature.gpio]
+[hardware.dht11.gpio]
 data_pin = 12
 
 [hardware.light.gpio]

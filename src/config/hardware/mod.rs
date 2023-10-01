@@ -1,18 +1,18 @@
 pub mod ballast;
 pub mod light;
 pub mod propulsion;
-pub mod temperature;
+pub mod dht11;
 
 use serde::Deserialize;
 use ballast::BallastConfig;
 use light::LightConfig;
 use propulsion::PropulsionConfig;
-use temperature::TemperatureConfig;
+use dht11::Dht11Config;
 
 #[derive(Debug, Deserialize)]
 pub struct HardwareConfig {
     pub ballast: BallastConfig,
     pub light: LightConfig,
     pub propulsion: PropulsionConfig,
-    pub temperature: TemperatureConfig,
+    pub dht11: Dht11Config,
 }

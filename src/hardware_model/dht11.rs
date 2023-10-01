@@ -1,7 +1,7 @@
 // https://www.mouser.com/datasheet/2/758/DHT11-Technical-Data-Sheet-Translated-Version-1143054.pdf
 
 use crate::{
-    config::hardware::temperature::TemperatureConfig,
+    config::hardware::dht11::Dht11Config,
     error::PeripheralInitError,
     traits::Tick,
 };
@@ -29,7 +29,7 @@ enum Error {
 }
 
 impl Dht11 {
-    pub fn new(config: &TemperatureConfig) -> Result<Self, PeripheralInitError> {
+    pub fn new(config: &Dht11Config) -> Result<Self, PeripheralInitError> {
         Ok(Self {
             data_pin: Gpio::new().map_err(|e| {
                 PeripheralInitError{
