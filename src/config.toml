@@ -1,6 +1,9 @@
 [system]
 tick_rate = 10 # how many times per second to tick
 
+[telemetry]
+socket = "/tmp/sub_tlm_socket"
+
 [commanding]
 socket = "/tmp/sub_cmd_socket"
 

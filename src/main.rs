@@ -3,34 +3,48 @@ mod config;
 mod definitions;
 mod error;
 mod hardware_model;
-mod metrics;
+mod telemetry;
 mod traits;
 
 use traits::Tick;
 use hardware_model::Submarine;
+use telemetry::Telemetry;
 use std::time::Duration;
 use std::sync::{ Arc, atomic::{ AtomicBool, Ordering} };
 use ctrlc;
 
 #[tokio::main]
 async fn main() {
-    let (mut sub, sys_config) = init_system().unwrap();
-    run_system(&mut sub, sys_config.tick_rate).await;
+    println!("Initializing system..");
+    let (mut sub, mut telemetry, sys_config) = init_system().unwrap();
+    println!("Initialization complete.");
+    run_system(&mut sub, &mut telemetry, sys_config.tick_rate).await;
     stop_system();
 }
 
 fn init_system() -> Result<
-    (Submarine, config::SystemConfig),
+    (Submarine, Telemetry, config::SystemConfig),
     error::PeripheralInitError
 > {
-    println!("Initializing system..");
+    println!("Loading configs.");
     let config = config::Config::load();
-    command::start_command_listener(&config.commanding);
 
-    Ok((hardware_model::Submarine::new(&config.hardware)?, config.system))
+    command::start_command_listener(&config.commanding);
+    println!("Instantiating telemetry.");
+    let telemetry = Telemetry::new(&config.telemetry);
+
+    Ok((
+        hardware_model::Submarine::new(&config.hardware)?,
+        telemetry,
+        config.system,
+    ))
 }
 
-async fn run_system(sub: &mut Submarine, tick_rate: u8) {
+async fn run_system(
+    sub: &mut Submarine,
+    telem: &mut Telemetry,
+    tick_rate: u8,
+) {
     println!("Starting system");
     let mut tick_count: u128 = 0;
     let tick_interval: Duration =
@@ -38,6 +52,9 @@ async fn run_system(sub: &mut Submarine, tick_rate: u8) {
     let run_system: Arc<AtomicBool> = 
         Arc::new(AtomicBool::new(true));
     let run_system_sigint = run_system.clone();
+
+    let mut tick_delta = Duration::ZERO;
+    let mut delay = Duration::ZERO;
 
     ctrlc::set_handler(move || {
         run_system_sigint.store(false, Ordering::SeqCst);
@@ -47,14 +64,18 @@ async fn run_system(sub: &mut Submarine, tick_rate: u8) {
     while run_system.load(Ordering::SeqCst) {
         let tick_start = std::time::Instant::now();
 
+        telem.collect_system_telemetry(tick_delta, delay);
+
         command::dispatch(sub);
         sub.tick(tick_count);
 
+        telem.collect_hw_telemetry(sub);
+        telem.emit_telemetry();
+
         tick_count += 1;
 
-        let tick_end = std::time::Instant::now();
-        let tick_delta = tick_end.duration_since(tick_start);
-        let delay = tick_interval.checked_sub(tick_delta)
+        tick_delta = tick_start.elapsed();
+        delay = tick_interval.checked_sub(tick_delta)
             .get_or_insert(Duration::ZERO).clone();
 
         std::thread::sleep(delay);

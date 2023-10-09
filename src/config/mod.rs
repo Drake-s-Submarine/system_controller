@@ -1,4 +1,5 @@
 pub mod hardware;
+pub mod telemetry;
 
 use serde::Deserialize;
 use std::fs;
@@ -10,6 +11,7 @@ pub struct Config {
     pub system: SystemConfig,
     pub commanding: CommandingConfig,
     pub hardware: hardware::HardwareConfig,
+    pub telemetry: telemetry::TelemetryConfig,
 }
 
 #[derive(Debug, Deserialize)]

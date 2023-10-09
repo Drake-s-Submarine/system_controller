@@ -59,6 +59,18 @@ impl Dht11 {
         })
     }
 
+    pub fn get_temperature(&self) -> u8 {
+        self.last_measured_temp.0
+    }
+
+    pub fn get_humidity(&self) -> u8 {
+        self.last_measured_rh.0
+    }
+
+    pub fn is_last_read_valid(&self) -> bool {
+        self.last_read_valid
+    }
+
     fn read_sensor(&mut self) -> Result<(), Error> {
         self.send_start_signal()?;
         self.read_data_transmission()?;
