@@ -26,9 +26,9 @@ impl super::Telemeter for EnvironmentTelemetry {
     fn serialize(&self) -> [u8; TELEMETRY_PACKET_SIZE] {
         let mut buffer: [u8; TELEMETRY_PACKET_SIZE] = [0; TELEMETRY_PACKET_SIZE];
 
-        buffer[1] = self.internal_temperature_c;
-        buffer[2] = self.internal_humidity_percent;
-        buffer[3] = self.is_stale as u8;
+        buffer[0] = self.internal_temperature_c;
+        buffer[1] = self.internal_humidity_percent;
+        buffer[2] = self.is_stale as u8;
 
         buffer
     }

@@ -11,6 +11,7 @@ use rppal::{
 };
 use embedded_hal::blocking::delay::{ DelayMs, DelayUs };
 
+#[derive(Debug)]
 pub struct Dht11 {
     data_pin: IoPin,
     sample_interval: u8,
@@ -127,8 +128,8 @@ impl Dht11 {
             return Err(Error::Parity);
         }
 
-        self.last_measured_temp = (buffer[0], buffer[1]);
-        self.last_measured_rh = (buffer[2], buffer[3]);
+        self.last_measured_rh = (buffer[0], buffer[1]);
+        self.last_measured_temp = (buffer[2], buffer[3]);
 
         Ok(())
     }
