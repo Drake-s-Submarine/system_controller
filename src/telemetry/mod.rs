@@ -8,7 +8,7 @@ use crate::{
 };
 use system::SystemTelemetry;
 use std::{
-    fs::File,
+    fs::{ remove_file, File },
     io::Write,
     time::Duration,
     thread,
@@ -31,6 +31,7 @@ pub struct Telemetry {
 impl Telemetry {
     pub fn new(config: &TelemetryConfig) -> Self {
         let pipe_path = tempdir().unwrap().path().join(&config.socket);
+        let _ = remove_file(&pipe_path);
         unistd::mkfifo(&pipe_path, nix::sys::stat::Mode::S_IRWXU).unwrap();
 
         let (sender, receiver): (mpsc::Sender<[u8; TELEMETRY_PACKET_SIZE]>, mpsc::Receiver<[u8; TELEMETRY_PACKET_SIZE]>) = mpsc::channel();
