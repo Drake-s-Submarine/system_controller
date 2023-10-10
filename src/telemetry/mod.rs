@@ -17,11 +17,10 @@ use std::{
 use nix::unistd;
 use tempfile::tempdir;
 
-
 const TELEMETRY_PACKET_SIZE: usize = 16;
 
 pub struct Telemetry {
-    packet_list: Vec<(Box<dyn Telemeter>, u8, bool)>,
+    hw_packet_list: Vec<(Box<dyn Telemeter>, u8, bool)>,
     system: (SystemTelemetry, u8, bool),
     transmit_handle: thread::JoinHandle<()>,
     sender: mpsc::Sender<[u8; TELEMETRY_PACKET_SIZE]>,
@@ -31,35 +30,23 @@ pub struct Telemetry {
 impl Telemetry {
     pub fn new(config: &TelemetryConfig) -> Self {
         let pipe_path = tempdir().unwrap().path().join(&config.socket);
-        let _ = remove_file(&pipe_path);
-        unistd::mkfifo(&pipe_path, nix::sys::stat::Mode::S_IRWXU).unwrap();
-
-        let (sender, receiver): (mpsc::Sender<[u8; TELEMETRY_PACKET_SIZE]>, mpsc::Receiver<[u8; TELEMETRY_PACKET_SIZE]>) = mpsc::channel();
-
-        let h = thread::spawn(move || {
-            let mut pipe_handle = File::create(&pipe_path).unwrap();
-
-            while let Ok(telemetry) = receiver.recv() {
-                if let Err(e) = pipe_handle.write_all(&telemetry) {
-                    eprintln!("Error emitting telemetry: {}", e);
-                } else { }
-            }
-        });
+        let (transmit_handle, sender) =
+            Telemetry::create_transmit_thread(pipe_path);
 
         Self {
-            packet_list: vec![
+            hw_packet_list: vec![
                 (Box::new(EnvironmentTelemetry::new()), 0x0, true)
             ],
-
             system: (SystemTelemetry::new(), 0xF, true),
-            transmit_handle: h,
+
+            transmit_handle,
             sender,
             enabled: true,
         }
     }
 
     pub fn collect_hw_telemetry(&mut self, sub: &Submarine) {
-        for (packet, _, enabled) in self.packet_list.iter_mut() {
+        for (packet, _, enabled) in self.hw_packet_list.iter_mut() {
             if *enabled {
                 packet.collect(sub);
             }
@@ -71,25 +58,11 @@ impl Telemetry {
             return
         }
 
-        for (packet, id, enabled) in self.packet_list.iter_mut() {
-            if *enabled {
-                let mut payload = packet.serialize();
-                payload[payload.len() - 1] = *id;
-                if let Err(e) = self.sender.send(payload) {
-                    eprintln!( "Error emitting telemetry: {:#}", e);
-                    // TODO: attempt reconnect
-                }
-            }
+        if let Err(e) = self.emit_hw_telemetry() {
+            eprintln!("Failed to share telem with transmit thread: {:#}", e);
         }
-
-        if self.system.2 {
-            let mut payload = self.system.0.serialize();
-            payload[payload.len() - 1] = self.system.1;
-
-            if let Err(e) = self.sender.send(payload) {
-                eprintln!( "Error emitting telemetry: {:#}", e);
-                // TODO: attempt reconnect
-            }
+        if let Err(e) = self.emit_system_telemetry() {
+            eprintln!("Failed to share telem with transmit thread: {:#}", e);
         }
     }
 
@@ -98,7 +71,65 @@ impl Telemetry {
         delta: Duration,
         idle: Duration,
     ) {
-        self.system.0.ingest_tick(delta, idle);
+        if self.enabled {
+            self.system.0.ingest_tick(delta, idle);
+        }
+    }
+
+    fn emit_hw_telemetry(&mut self) ->
+        Result<(), mpsc::SendError<[u8; TELEMETRY_PACKET_SIZE]>>
+    {
+        for (packet, id, enabled) in self.hw_packet_list.iter_mut() {
+            if *enabled {
+                let mut payload = packet.serialize();
+                payload[payload.len() - 1] = *id;
+                self.sender.send(payload)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn emit_system_telemetry(&mut self) ->
+        Result<(), mpsc::SendError<[u8; TELEMETRY_PACKET_SIZE]>>
+    {
+        if self.system.2 {
+            let mut payload = self.system.0.serialize();
+            payload[payload.len() - 1] = self.system.1;
+
+            self.sender.send(payload)?
+        }
+
+        Ok(())
+    }
+
+    fn create_pipe(pipe_path: &std::path::PathBuf) {
+        let _ = remove_file(pipe_path);
+        unistd::mkfifo(pipe_path, nix::sys::stat::Mode::S_IRWXU).unwrap();
+    }
+
+    fn create_mpsc() ->
+        (mpsc::Sender<[u8; TELEMETRY_PACKET_SIZE]>,
+         mpsc::Receiver<[u8; TELEMETRY_PACKET_SIZE]>)
+    { mpsc::channel() }
+
+    fn create_transmit_thread(pipe_path: std::path::PathBuf) -> (
+        thread::JoinHandle<()>,
+        mpsc::Sender<[u8; TELEMETRY_PACKET_SIZE]>
+    ) {
+        let (sender, receiver) = Telemetry::create_mpsc();
+        Telemetry::create_pipe(&pipe_path);
+
+        (thread::spawn(move || {
+            let mut pipe_handle = File::create(pipe_path).unwrap();
+            while let Ok(telemetry) = receiver.recv() {
+                if let Err(e) = pipe_handle.write_all(&telemetry) {
+                    eprintln!("Error emitting telemetry: {}", e);
+                } else { }
+            }
+        }),
+
+        sender)
     }
 }
 
