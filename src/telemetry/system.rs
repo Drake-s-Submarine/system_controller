@@ -2,6 +2,8 @@ use std::time::Duration;
 use std::fmt::Display;
 use super::TELEMETRY_PACKET_SIZE;
 
+const SERIALIZED_BUFFER_SIZE: u8 = 12;
+
 #[derive(Debug)]
 pub struct SystemTelemetry {
     tick_delta: Duration,
@@ -24,7 +26,7 @@ impl SystemTelemetry {
         self.total_tick_time = delay.saturating_add(delta);
     } 
 
-    pub fn serialize(&self) -> [u8; TELEMETRY_PACKET_SIZE] {
+    pub fn serialize(&self) -> ([u8; TELEMETRY_PACKET_SIZE], u8) {
         let mut buffer: [u8; TELEMETRY_PACKET_SIZE] = [0; TELEMETRY_PACKET_SIZE];
 
         let delta = (self.tick_delta.as_micros() as u32).to_le_bytes();
@@ -46,7 +48,7 @@ impl SystemTelemetry {
         buffer[10] = total[2];
         buffer[11] = total[3];
 
-        buffer
+        (buffer, SERIALIZED_BUFFER_SIZE)
     }
 }
 
