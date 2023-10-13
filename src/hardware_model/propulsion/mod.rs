@@ -52,7 +52,7 @@ impl Propulsion {
 }
 
 impl Tick for Propulsion {
-    fn tick(&mut self, tick_count: u128) {
+    fn tick(&mut self, tick_count: u32) {
         self.set_forward_thrust();
         self.set_yaw_thrust();
 

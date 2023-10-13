@@ -99,7 +99,7 @@ impl Ballast {
 }
 
 impl Tick for Ballast {
-    fn tick(&mut self, _tick_count: u128) {
+    fn tick(&mut self, _tick_count: u32) {
         if self.state == BallastState::Transition {
             self.stop_all();
         }

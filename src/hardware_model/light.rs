@@ -64,7 +64,7 @@ impl Light {
 }
 
 impl Tick for Light {
-    fn tick(&mut self, tick_count: u128) {
+    fn tick(&mut self, tick_count: u32) {
         match self.state {
             State::Off => self.en_pin.set_low(),
             State::On => self.en_pin.set_high(),

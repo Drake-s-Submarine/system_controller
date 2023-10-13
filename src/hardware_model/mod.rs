@@ -30,7 +30,7 @@ impl Submarine {
 }
 
 impl Tick for Submarine {
-    fn tick(&mut self, tick_count: u128) {
+    fn tick(&mut self, tick_count: u32) {
         self.ballast.tick(tick_count);
         self.light.tick(tick_count);
         self.propulsion.tick(tick_count);

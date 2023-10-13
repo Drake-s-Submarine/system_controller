@@ -17,7 +17,9 @@ use std::{
 use nix::unistd;
 use tempfile::tempdir;
 
-const TELEMETRY_PACKET_SIZE: usize = 16;
+const TELEMETRY_PACKET_SIZE: usize = 32;
+const ID_BYTE_OFFSET: usize = 1;
+const TICK_BYTE_OFFSET: usize = 1;
 
 pub struct Telemetry {
     hw_packet_list: Vec<(Box<dyn Telemeter>, u8, bool)>,
@@ -26,6 +28,7 @@ pub struct Telemetry {
     sender: mpsc::Sender<[u8; TELEMETRY_PACKET_SIZE]>,
     enabled: bool,
     pipe_location: String,
+    tick_count: u32,
 }
 
 impl Telemetry {
@@ -44,7 +47,12 @@ impl Telemetry {
             sender,
             enabled: true,
             pipe_location: String::from(config.socket.clone()),
+            tick_count: 0,
         }
+    }
+
+    pub fn set_tick_count(&mut self, tick_count: u32) {
+        self.tick_count = tick_count;
     }
 
     pub fn collect_hw_telemetry(&mut self, sub: &Submarine) {
@@ -82,10 +90,10 @@ impl Telemetry {
         }
 
         if let Err(e) = self.emit_hw_telemetry() {
-            eprintln!("Failed to share telem with transmit thread: {:#}", e);
+            eprintln!("Failed to share telem with transmit thread: {}", e);
         }
         if let Err(e) = self.emit_system_telemetry() {
-            eprintln!("Failed to share telem with transmit thread: {:#}", e);
+            eprintln!("Failed to share telem with transmit thread: {}", e);
         }
     }
 
@@ -95,7 +103,10 @@ impl Telemetry {
         for (packet, id, enabled) in self.hw_packet_list.iter_mut() {
             if *enabled {
                 let (mut payload, size) = packet.serialize();
-                payload[payload.len() - 1] = *id;
+                if let Err(_) = Telemetry::apply_tick_count(&mut payload, size, self.tick_count) {
+                    eprintln!("Not enough room in {:#X} buffer for tick count.", self.system.1);
+                };
+                payload[payload.len() - ID_BYTE_OFFSET] = *id;
                 self.sender.send(payload)?;
             }
         }
@@ -108,9 +119,12 @@ impl Telemetry {
     {
         if self.system.2 {
             let (mut payload, size) = self.system.0.serialize();
-            payload[payload.len() - 1] = self.system.1;
+            if let Err(_) = Telemetry::apply_tick_count(&mut payload, size, self.tick_count) {
+                eprintln!("Not enough room in {:#X} buffer for tick count.", self.system.1);
+            };
+            payload[payload.len() - ID_BYTE_OFFSET] = self.system.1;
 
-            self.sender.send(payload)?
+            self.sender.send(payload)?;
         }
 
         Ok(())
@@ -145,6 +159,26 @@ impl Telemetry {
         }),
 
         sender)
+    }
+
+    fn apply_tick_count(
+        buffer: &mut [u8; TELEMETRY_PACKET_SIZE],
+        sz: u8,
+        tick_count: u32
+    ) -> Result<(), ()> {
+        let tick_count_buf = tick_count.to_le_bytes();
+        let end_index = TELEMETRY_PACKET_SIZE - TICK_BYTE_OFFSET;
+
+        if (end_index - tick_count_buf.len()) as u8 <= sz {
+            return Err(());
+        }
+
+        for i in 0..tick_count_buf.len() {
+            buffer[end_index - tick_count_buf.len() + i] =
+                tick_count_buf[i];
+        }
+
+        Ok(())
     }
 }
 

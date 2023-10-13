@@ -4,6 +4,6 @@ pub trait SubmarineComponent {
 }
 
 pub trait Tick {
-    fn tick(&mut self, tick_count: u128);
+    fn tick(&mut self, tick_count: u32);
 }
 

@@ -168,9 +168,9 @@ impl Dht11 {
 }
 
 impl Tick for Dht11 {
-    fn tick(&mut self, tick_count: u128) {
+    fn tick(&mut self, tick_count: u32) {
         // TODO: use ms to ticks fn once implemented (see issue #12)
-        if tick_count % (self.sample_interval as u128 * 10) == 0 {
+        if tick_count % (self.sample_interval as u32 * 10) == 0 {
             match self.read_sensor() {
                 Ok(_) => {
                     self.last_read_valid = true;

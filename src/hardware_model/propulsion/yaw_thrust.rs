@@ -81,7 +81,7 @@ impl YawThrust {
 }
 
 impl Tick for YawThrust {
-    fn tick(&mut self, tick_count: u128) {
+    fn tick(&mut self, tick_count: u32) {
         self.port_thruster.tick(tick_count);
         self.starboard_thruster.tick(tick_count);
     }

@@ -46,7 +46,7 @@ async fn run_system(
     tick_rate: u8,
 ) {
     println!("Starting system");
-    let mut tick_count: u128 = 0;
+    let mut tick_count: u32 = 0;
     let tick_interval: Duration =
         Duration::from_millis(1000/tick_rate as u64);
     let run_system: Arc<AtomicBool> = 
@@ -64,6 +64,7 @@ async fn run_system(
     while run_system.load(Ordering::SeqCst) {
         let tick_start = std::time::Instant::now();
 
+        telem.set_tick_count(tick_count);
         telem.collect_system_telemetry(tick_delta, delay);
 
         command::dispatch(sub);

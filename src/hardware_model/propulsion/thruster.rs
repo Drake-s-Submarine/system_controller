@@ -59,7 +59,7 @@ impl SubmarineComponent for Thruster {
 }
 
 impl Tick for Thruster {
-    fn tick(&mut self, _tick_count: u128) {
+    fn tick(&mut self, _tick_count: u32) {
         if !self.enabled {
             return;
         }
