@@ -23,6 +23,10 @@ const TELEMETRY_PACKET_SIZE: usize = 32;
 const ID_BYTE_OFFSET: usize = 1;
 const TICK_BYTE_OFFSET: usize = 1;
 
+const ENVIRONMENT_PACKET_ID: u8 = 0x0;
+const BALLAST_PACKET_ID: u8 = 0x1;
+const SYSTEM_PACKET_ID: u8 = 0xF;
+
 struct TelemetryPacket {
     payload: Box<dyn Telemeter>,
     id: u8,
@@ -61,10 +65,12 @@ impl Telemetry {
         Self {
             // add new telemetry packets here
             hw_packet_list: vec![
-                TelemetryPacket::new(Box::new(EnvironmentTelemetry::new()), 0x0),
-                TelemetryPacket::new(Box::new(BallastTelemetry::new()), 0x1),
+                TelemetryPacket::new(Box::new(EnvironmentTelemetry::new()),
+                    ENVIRONMENT_PACKET_ID),
+                TelemetryPacket::new(Box::new(BallastTelemetry::new()),
+                    BALLAST_PACKET_ID),
             ],
-            system: (SystemTelemetry::new(), 0xF, true),
+            system: (SystemTelemetry::new(), SYSTEM_PACKET_ID, true),
 
             transmit_handle,
             sender,
