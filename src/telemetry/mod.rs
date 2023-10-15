@@ -23,8 +23,28 @@ const TELEMETRY_PACKET_SIZE: usize = 32;
 const ID_BYTE_OFFSET: usize = 1;
 const TICK_BYTE_OFFSET: usize = 1;
 
+struct TelemetryPacket {
+    payload: Box<dyn Telemeter>,
+    id: u8,
+    enabled: bool,
+}
+
+impl TelemetryPacket {
+    pub fn new(payload: Box<dyn Telemeter>, id: u8) -> Self {
+        Self {
+            payload,
+            id,
+            enabled: true,
+        }
+    }
+
+    fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+    }
+}
+
 pub struct Telemetry {
-    hw_packet_list: Vec<(Box<dyn Telemeter>, u8, bool)>,
+    hw_packet_list: Vec<TelemetryPacket>,
     system: (SystemTelemetry, u8, bool),
     transmit_handle: thread::JoinHandle<()>,
     sender: mpsc::Sender<[u8; TELEMETRY_PACKET_SIZE]>,
@@ -41,8 +61,8 @@ impl Telemetry {
         Self {
             // add new telemetry packets here
             hw_packet_list: vec![
-                (Box::new(EnvironmentTelemetry::new()), 0x0, true),
-                (Box::new(BallastTelemetry::new()), 0x1, true),
+                TelemetryPacket::new(Box::new(EnvironmentTelemetry::new()), 0x0),
+                TelemetryPacket::new(Box::new(BallastTelemetry::new()), 0x1),
             ],
             system: (SystemTelemetry::new(), 0xF, true),
 
@@ -61,9 +81,9 @@ impl Telemetry {
     pub fn collect_hw_telemetry(&mut self, sub: &Submarine) {
         if !self.enabled { return; }
 
-        for (packet, _, enabled) in self.hw_packet_list.iter_mut() {
-            if *enabled {
-                packet.collect(sub);
+        for packet in self.hw_packet_list.iter_mut() {
+            if packet.enabled {
+                packet.payload.collect(sub);
             }
         }
     }
@@ -106,16 +126,16 @@ impl Telemetry {
     fn emit_hw_telemetry(&mut self, buffer: &mut [u8; TELEMETRY_PACKET_SIZE]) ->
         Result<(), mpsc::SendError<[u8; TELEMETRY_PACKET_SIZE]>>
     {
-        for (packet, id, enabled) in self.hw_packet_list.iter_mut() {
-            if *enabled {
+        for packet in self.hw_packet_list.iter_mut() {
+            if packet.enabled {
                 buffer.fill(0);
-                let size = packet.serialize(buffer);
+                let size = packet.payload.serialize(buffer);
 
                 if let Err(_) = Telemetry::apply_tick_count(buffer, size, self.tick_count) {
                     eprintln!("Not enough room in {:#X} buffer for tick count.", self.system.1);
                 };
 
-                buffer[buffer.len() - ID_BYTE_OFFSET] = *id;
+                buffer[buffer.len() - ID_BYTE_OFFSET] = packet.id;
 
                 self.sender.send(buffer.clone())?;
             }
