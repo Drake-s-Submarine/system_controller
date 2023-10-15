@@ -16,7 +16,7 @@ use std::{
     io::Write,
     time::Duration,
     thread,
-    sync::mpsc,
+    sync::{ mpsc, Arc, atomic::{ AtomicBool, Ordering } },
 };
 use nix::unistd;
 use tempfile::tempdir;
@@ -51,15 +51,17 @@ pub struct Telemetry {
     system: (SystemTelemetry, u8, bool),
     emit_thread_handle: thread::JoinHandle<()>,
     emit_channel: mpsc::Sender<[u8; TELEMETRY_PACKET_SIZE]>,
-    enabled: bool,
     pipe_location: String,
     tick_count: u32,
+    enabled: bool,
+    emitter_ready: Arc<AtomicBool>,
 }
 
 impl Telemetry {
     pub fn new(config: &TelemetryConfig) -> Self {
+        let emitter_ready = Arc::new(AtomicBool::new(false));
         let (transmit_handle, channel) =
-            Telemetry::create_transmit_thread(&config.socket);
+            Telemetry::create_transmit_thread(&config.socket, &emitter_ready);
 
         Self {
             // add new telemetry packets here
@@ -75,9 +77,10 @@ impl Telemetry {
 
             emit_thread_handle: transmit_handle,
             emit_channel: channel,
-            enabled: true,
             pipe_location: String::from(config.socket.clone()),
             tick_count: 0,
+            enabled: true,
+            emitter_ready,
         }
     }
 
@@ -88,7 +91,8 @@ impl Telemetry {
     pub fn collect_hw_telemetry(&mut self, sub: &Submarine) {
         self.hw_packet_list[0].enabled = false;
         self.hw_packet_list[1].enabled = false;
-        if !self.enabled { return; }
+        if !self.enabled
+            || !self.emitter_ready.load(Ordering::SeqCst) { return; }
 
         for packet in self.hw_packet_list.iter_mut() {
             if packet.enabled {
@@ -102,27 +106,29 @@ impl Telemetry {
         delta: Duration,
         idle: Duration,
     ) {
-        if !self.enabled { return; }
+        if !self.enabled
+            || !self.emitter_ready.load(Ordering::SeqCst) { return; }
+
         if self.system.2 {
             self.system.0.ingest_tick(delta, idle);
         }
     }
 
     pub fn emit_telemetry(&mut self) {
-        if !self.enabled {
+        if self.emit_thread_handle.is_finished() {
+            let (transmit_handle, sender) =
+                Telemetry::create_transmit_thread(&self.pipe_location, &self.emitter_ready);
+
+            self.emit_thread_handle = transmit_handle;
+            self.emit_channel = sender;
+        }
+
+        if !self.enabled || !self.emitter_ready.load(Ordering::SeqCst) {
             return
         }
 
         let mut buffer: [u8; TELEMETRY_PACKET_SIZE] =
             [0; TELEMETRY_PACKET_SIZE];
-
-        if self.emit_thread_handle.is_finished() {
-            let (transmit_handle, sender) =
-                Telemetry::create_transmit_thread(&self.pipe_location);
-
-            self.emit_thread_handle = transmit_handle;
-            self.emit_channel = sender;
-        }
 
         if let Err(e) = self.emit_hw_telemetry(&mut buffer) {
             eprintln!("Failed to share telem with transmit thread: {}", e);
@@ -147,7 +153,6 @@ impl Telemetry {
                     eprintln!("Not enough room in {:#X} buffer for packet ID.", packet.id);
                     return Ok(());
                 }
-
                 self.emit_channel.send(buffer.clone())?;
             }
         }
@@ -184,22 +189,27 @@ impl Telemetry {
          mpsc::Receiver<[u8; TELEMETRY_PACKET_SIZE]>)
     { mpsc::channel() }
 
-    fn create_transmit_thread(pipe_location: &str) -> (
+    fn create_transmit_thread(pipe_location: &str, ready_flag: &Arc<AtomicBool>) -> (
         thread::JoinHandle<()>,
         mpsc::Sender<[u8; TELEMETRY_PACKET_SIZE]>
     ) {
         let (sender, receiver) = Telemetry::create_mpsc();
         let pipe_path = tempdir().unwrap().path().join(pipe_location);
+        let emitter_ready = ready_flag.clone();
 
         (thread::spawn(move || {
-            let mut pipe_handle = File::create(&pipe_path).unwrap();
             Telemetry::create_pipe(&pipe_path);
+            let mut pipe_handle = File::create(&pipe_path).unwrap();
+
+            emitter_ready.store(true, Ordering::SeqCst);
             while let Ok(telemetry) = receiver.recv() {
                 if let Err(e) = pipe_handle.write_all(&telemetry) {
                     eprintln!("Error emitting telemetry: {}", e);
                     break;
                 }
             }
+
+            emitter_ready.store(false, Ordering::SeqCst);
         }),
 
         sender)
