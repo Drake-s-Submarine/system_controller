@@ -9,7 +9,7 @@ use {
 };
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-enum BallastState {
+pub enum BallastState {
     Discharge,
     Intake,
     Idle,
@@ -77,6 +77,14 @@ impl Ballast {
             BallastCommand::Intake => self.set_intake_state(),
             BallastCommand::Discharge => self.set_discharge_state(),
         }
+    }
+
+    pub fn get_current_state(&self) -> BallastState {
+        self.state
+    }
+
+    pub fn get_target_state(&self) -> BallastState {
+        self.target_state
     }
     
     fn set_discharge_state(&mut self) {

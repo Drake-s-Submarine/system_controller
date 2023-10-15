@@ -1,12 +1,14 @@
+pub mod ballast;
 pub mod environment;
 pub mod system;
 
+use ballast::BallastTelemetry;
 use environment::EnvironmentTelemetry;
+use system::SystemTelemetry;
 use crate::{
     hardware_model::Submarine,
     config::telemetry::TelemetryConfig,
 };
-use system::SystemTelemetry;
 use std::{
     fs::{ remove_file, File },
     io::Write,
@@ -39,7 +41,8 @@ impl Telemetry {
         Self {
             // add new telemetry packets here
             hw_packet_list: vec![
-                (Box::new(EnvironmentTelemetry::new()), 0x0, true)
+                (Box::new(EnvironmentTelemetry::new()), 0x0, true),
+                (Box::new(BallastTelemetry::new()), 0x1, true),
             ],
             system: (SystemTelemetry::new(), 0xF, true),
 
@@ -103,10 +106,13 @@ impl Telemetry {
         for (packet, id, enabled) in self.hw_packet_list.iter_mut() {
             if *enabled {
                 let (mut payload, size) = packet.serialize();
+
                 if let Err(_) = Telemetry::apply_tick_count(&mut payload, size, self.tick_count) {
                     eprintln!("Not enough room in {:#X} buffer for tick count.", self.system.1);
                 };
+
                 payload[payload.len() - ID_BYTE_OFFSET] = *id;
+
                 self.sender.send(payload)?;
             }
         }
