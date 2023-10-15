@@ -84,6 +84,9 @@ impl Telemetry {
             return
         }
 
+        let mut buffer: [u8; TELEMETRY_PACKET_SIZE] =
+            [0; TELEMETRY_PACKET_SIZE];
+
         if self.transmit_handle.is_finished() {
             let (transmit_handle, sender) =
                 Telemetry::create_transmit_thread(&self.pipe_location);
@@ -92,45 +95,46 @@ impl Telemetry {
             self.sender = sender;
         }
 
-        if let Err(e) = self.emit_hw_telemetry() {
+        if let Err(e) = self.emit_hw_telemetry(&mut buffer) {
             eprintln!("Failed to share telem with transmit thread: {}", e);
         }
-        if let Err(e) = self.emit_system_telemetry() {
+        if let Err(e) = self.emit_system_telemetry(&mut buffer) {
             eprintln!("Failed to share telem with transmit thread: {}", e);
         }
     }
 
-    fn emit_hw_telemetry(&mut self) ->
+    fn emit_hw_telemetry(&mut self, buffer: &mut [u8; TELEMETRY_PACKET_SIZE]) ->
         Result<(), mpsc::SendError<[u8; TELEMETRY_PACKET_SIZE]>>
     {
         for (packet, id, enabled) in self.hw_packet_list.iter_mut() {
             if *enabled {
-                let (mut payload, size) = packet.serialize();
+                buffer.fill(0);
+                let size = packet.serialize(buffer);
 
-                if let Err(_) = Telemetry::apply_tick_count(&mut payload, size, self.tick_count) {
+                if let Err(_) = Telemetry::apply_tick_count(buffer, size, self.tick_count) {
                     eprintln!("Not enough room in {:#X} buffer for tick count.", self.system.1);
                 };
 
-                payload[payload.len() - ID_BYTE_OFFSET] = *id;
+                buffer[buffer.len() - ID_BYTE_OFFSET] = *id;
 
-                self.sender.send(payload)?;
+                self.sender.send(buffer.clone())?;
             }
         }
 
         Ok(())
     }
 
-    fn emit_system_telemetry(&mut self) ->
+    fn emit_system_telemetry(&mut self, buffer: &mut [u8; TELEMETRY_PACKET_SIZE]) ->
         Result<(), mpsc::SendError<[u8; TELEMETRY_PACKET_SIZE]>>
     {
         if self.system.2 {
-            let (mut payload, size) = self.system.0.serialize();
-            if let Err(_) = Telemetry::apply_tick_count(&mut payload, size, self.tick_count) {
+            let size = self.system.0.serialize(buffer);
+            if let Err(_) = Telemetry::apply_tick_count(buffer, size, self.tick_count) {
                 eprintln!("Not enough room in {:#X} buffer for tick count.", self.system.1);
             };
-            payload[payload.len() - ID_BYTE_OFFSET] = self.system.1;
+            buffer[buffer.len() - ID_BYTE_OFFSET] = self.system.1;
 
-            self.sender.send(payload)?;
+            self.sender.send(buffer.clone())?;
         }
 
         Ok(())
@@ -190,5 +194,5 @@ impl Telemetry {
 
 trait Telemeter {
     fn collect(&mut self, sub: &Submarine);
-    fn serialize(&self) -> ([u8; TELEMETRY_PACKET_SIZE], u8);
+    fn serialize(&self, buffer: &mut [u8; TELEMETRY_PACKET_SIZE]) -> u8;
 }

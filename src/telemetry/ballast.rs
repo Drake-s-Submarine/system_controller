@@ -26,12 +26,10 @@ impl super::Telemeter for BallastTelemetry {
         self.current_state = ballast.get_current_state() as u8;
         self.target_state = ballast.get_target_state() as u8;
     }
-    fn serialize(&self) -> ([u8; TELEMETRY_PACKET_SIZE], u8) {
-        let mut buffer: [u8; TELEMETRY_PACKET_SIZE] = [0; TELEMETRY_PACKET_SIZE];
-
+    fn serialize(&self, buffer: &mut [u8; TELEMETRY_PACKET_SIZE]) -> u8 {
         buffer[0] = self.current_state;
         buffer[1] = self.target_state;
 
-        (buffer, SERIALIZED_BUFFER_SIZE)
+        SERIALIZED_BUFFER_SIZE
     }
 }

@@ -25,13 +25,11 @@ impl super::Telemeter for EnvironmentTelemetry {
         self.internal_humidity_percent = sub.dht11.get_humidity();
         self.is_stale = sub.dht11.is_last_read_valid();
     }
-    fn serialize(&self) -> ([u8; TELEMETRY_PACKET_SIZE], u8) {
-        let mut buffer: [u8; TELEMETRY_PACKET_SIZE] = [0; TELEMETRY_PACKET_SIZE];
-
+    fn serialize(&self, buffer: &mut [u8; TELEMETRY_PACKET_SIZE]) -> u8 {
         buffer[0] = self.internal_temperature_c;
         buffer[1] = self.internal_humidity_percent;
         buffer[2] = self.is_stale as u8;
 
-        (buffer, SERIALIZED_BUFFER_SIZE)
+        SERIALIZED_BUFFER_SIZE
     }
 }
