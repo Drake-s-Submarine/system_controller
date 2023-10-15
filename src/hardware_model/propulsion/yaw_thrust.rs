@@ -6,7 +6,7 @@ use crate::{
     config::hardware::propulsion::PropulsionConfig,
 };
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 enum ActiveThruster {
     Port,
     Starboard,
@@ -70,6 +70,18 @@ impl YawThrust {
             self.starboard_thruster.set_duty_cycle(0.0);
             self.active_thruster = ActiveThruster::Starboard;
         }
+    }
+
+    pub fn get_active_thruster(&self) -> u8 {
+        self.active_thruster.clone() as u8
+    }
+
+    pub fn get_current_duty_cycle(&self) -> f32 {
+        self.port_thruster.get_current_duty_cycle()
+    }
+
+    pub fn get_target_duty_cycle(&self) -> f32 {
+        self.port_thruster.get_target_duty_cycle()
     }
 
     #[allow(dead_code)]

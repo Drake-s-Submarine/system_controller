@@ -35,6 +35,30 @@ impl Propulsion {
         }
     }
 
+    pub fn get_direction(&self) -> DirectionVector {
+        self.vector
+    }
+
+    pub fn get_aft_duty_cycle(&self) -> f32 {
+        self.aft_thruster.get_current_duty_cycle()
+    }
+
+    pub fn get_aft_target_duty_cycle(&self) -> f32 {
+        self.aft_thruster.get_target_duty_cycle()
+    }
+
+    pub fn get_yaw_duty_cycle(&self) -> f32 {
+        self.yaw_thrust.get_current_duty_cycle()
+    }
+
+    pub fn get_yaw_target_duty_cycle(&self) -> f32 {
+        self.yaw_thrust.get_target_duty_cycle()
+    }
+
+    pub fn get_active_yaw_thruster(&self) -> u8 {
+        self.yaw_thrust.get_active_thruster()
+    }
+
     fn set_forward_thrust(&mut self) {
         let magnitude = self.vector.y;
         self.aft_thruster.set_target_duty_cycle(magnitude);

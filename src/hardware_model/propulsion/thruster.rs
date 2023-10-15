@@ -47,6 +47,14 @@ impl Thruster {
 
         self.control_pin.set_duty_cycle(duty_cycle).unwrap();
     }
+
+    pub fn get_target_duty_cycle(&self) -> f32 {
+        self.target_duty_cycle as f32
+    }
+
+    pub fn get_current_duty_cycle(&self) -> f32 {
+        self.control_pin.duty_cycle().unwrap() as f32
+    }
 }
 
 impl SubmarineComponent for Thruster {

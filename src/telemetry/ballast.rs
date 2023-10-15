@@ -1,9 +1,7 @@
-use crate::hardware_model::{
-    Submarine,
-};
+use crate::hardware_model::Submarine;
 use super::TELEMETRY_PACKET_SIZE;
 
-const SERIALIZED_BUFFER_SIZE: u8 = 3;
+const SERIALIZED_BUFFER_SIZE: u8 = 2;
 
 pub struct BallastTelemetry {
     pub current_state: u8,

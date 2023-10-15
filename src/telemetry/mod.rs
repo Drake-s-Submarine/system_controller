@@ -1,9 +1,11 @@
-pub mod ballast;
-pub mod environment;
-pub mod system;
+mod ballast;
+mod environment;
+mod propulsion;
+mod system;
 
 use ballast::BallastTelemetry;
 use environment::EnvironmentTelemetry;
+use propulsion::PropulsionTelemetry;
 use system::SystemTelemetry;
 use crate::{
     hardware_model::Submarine,
@@ -25,6 +27,7 @@ const TICK_BYTE_OFFSET: usize = 1;
 
 const ENVIRONMENT_PACKET_ID: u8 = 0x0;
 const BALLAST_PACKET_ID: u8 = 0x1;
+const PROPULSION_PACKET_ID: u8 = 0x2;
 const SYSTEM_PACKET_ID: u8 = 0xF;
 
 struct TelemetryPacket {
@@ -41,17 +44,13 @@ impl TelemetryPacket {
             enabled: true,
         }
     }
-
-    fn set_enabled(&mut self, enabled: bool) {
-        self.enabled = enabled;
-    }
 }
 
 pub struct Telemetry {
     hw_packet_list: Vec<TelemetryPacket>,
     system: (SystemTelemetry, u8, bool),
-    transmit_handle: thread::JoinHandle<()>,
-    sender: mpsc::Sender<[u8; TELEMETRY_PACKET_SIZE]>,
+    emit_thread_handle: thread::JoinHandle<()>,
+    emit_channel: mpsc::Sender<[u8; TELEMETRY_PACKET_SIZE]>,
     enabled: bool,
     pipe_location: String,
     tick_count: u32,
@@ -59,7 +58,7 @@ pub struct Telemetry {
 
 impl Telemetry {
     pub fn new(config: &TelemetryConfig) -> Self {
-        let (transmit_handle, sender) =
+        let (transmit_handle, channel) =
             Telemetry::create_transmit_thread(&config.socket);
 
         Self {
@@ -69,11 +68,13 @@ impl Telemetry {
                     ENVIRONMENT_PACKET_ID),
                 TelemetryPacket::new(Box::new(BallastTelemetry::new()),
                     BALLAST_PACKET_ID),
+                TelemetryPacket::new(Box::new(PropulsionTelemetry::new()),
+                    PROPULSION_PACKET_ID),
             ],
-            system: (SystemTelemetry::new(), SYSTEM_PACKET_ID, true),
+            system: (SystemTelemetry::new(), SYSTEM_PACKET_ID, false),
 
-            transmit_handle,
-            sender,
+            emit_thread_handle: transmit_handle,
+            emit_channel: channel,
             enabled: true,
             pipe_location: String::from(config.socket.clone()),
             tick_count: 0,
@@ -85,6 +86,8 @@ impl Telemetry {
     }
 
     pub fn collect_hw_telemetry(&mut self, sub: &Submarine) {
+        self.hw_packet_list[0].enabled = false;
+        self.hw_packet_list[1].enabled = false;
         if !self.enabled { return; }
 
         for packet in self.hw_packet_list.iter_mut() {
@@ -113,12 +116,12 @@ impl Telemetry {
         let mut buffer: [u8; TELEMETRY_PACKET_SIZE] =
             [0; TELEMETRY_PACKET_SIZE];
 
-        if self.transmit_handle.is_finished() {
+        if self.emit_thread_handle.is_finished() {
             let (transmit_handle, sender) =
                 Telemetry::create_transmit_thread(&self.pipe_location);
 
-            self.transmit_handle = transmit_handle;
-            self.sender = sender;
+            self.emit_thread_handle = transmit_handle;
+            self.emit_channel = sender;
         }
 
         if let Err(e) = self.emit_hw_telemetry(&mut buffer) {
@@ -140,10 +143,12 @@ impl Telemetry {
                 if let Err(_) = Telemetry::apply_tick_count(buffer, size, self.tick_count) {
                     eprintln!("Not enough room in {:#X} buffer for tick count.", self.system.1);
                 };
+                if let Err(_) = Telemetry::apply_packet_id(buffer, size, packet.id) {
+                    eprintln!("Not enough room in {:#X} buffer for packet ID.", packet.id);
+                    return Ok(());
+                }
 
-                buffer[buffer.len() - ID_BYTE_OFFSET] = packet.id;
-
-                self.sender.send(buffer.clone())?;
+                self.emit_channel.send(buffer.clone())?;
             }
         }
 
@@ -158,9 +163,12 @@ impl Telemetry {
             if let Err(_) = Telemetry::apply_tick_count(buffer, size, self.tick_count) {
                 eprintln!("Not enough room in {:#X} buffer for tick count.", self.system.1);
             };
-            buffer[buffer.len() - ID_BYTE_OFFSET] = self.system.1;
+            if let Err(_) = Telemetry::apply_packet_id(buffer, size, self.system.1) {
+                eprintln!("Not enough room in {:#X} buffer for packet ID.", self.system.1);
+                return Ok(());
+            }
 
-            self.sender.send(buffer.clone())?;
+            self.emit_channel.send(buffer.clone())?;
         }
 
         Ok(())
@@ -213,6 +221,22 @@ impl Telemetry {
             buffer[end_index - tick_count_buf.len() + i] =
                 tick_count_buf[i];
         }
+
+        Ok(())
+    }
+
+    fn apply_packet_id(
+        buffer: &mut [u8; TELEMETRY_PACKET_SIZE],
+        sz: u8,
+        id: u8
+    ) -> Result<(), ()> {
+        let id_idx = buffer.len() - ID_BYTE_OFFSET;
+
+        if id_idx as u8 <= sz {
+            return Err(())
+        }
+
+        buffer[id_idx] = id;
 
         Ok(())
     }
