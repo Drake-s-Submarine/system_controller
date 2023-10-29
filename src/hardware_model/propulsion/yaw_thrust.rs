@@ -1,29 +1,33 @@
-use super::Thruster;
-use rppal::{ gpio::{ Gpio, OutputPin }, pwm::Channel };
+use super::ThrusterController;
+use rppal::{
+    gpio::{ Gpio, OutputPin },
+    pwm::{ Channel, Pwm, Polarity, }
+};
 use crate::{
-    traits::{ Tick, SubmarineComponent },
+    traits::Tick,
     error::PeripheralInitError,
     config::hardware::propulsion::PropulsionConfig,
 };
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-enum ActiveThruster {
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum YawThruster {
     Port,
     Starboard,
     None,
 }
 
-pub struct YawThrust {
-    yaw_switch: OutputPin,
-    port_thruster: Thruster,
-    starboard_thruster: Thruster,
-    active_thruster: ActiveThruster,
+pub struct YawThrusterController {
+    yaw_switch_pin: OutputPin,
+    pwm_pin: Pwm,
+    target_duty_cycle: f64,
+    active_thruster: YawThruster,
+    target_thruster: YawThruster,
 }
 
-impl YawThrust {
+impl YawThrusterController {
     pub fn new(pwm_channel: Channel, config: &PropulsionConfig) -> Result<Self, PeripheralInitError> {
         Ok(Self {
-            yaw_switch: Gpio::new().map_err(|e| {
+            yaw_switch_pin: Gpio::new().map_err(|e| {
                 PeripheralInitError{
                     message: format!(
                         "Failed to init Gpio for pin {}: {}",
@@ -40,35 +44,51 @@ impl YawThrust {
                     )
                 }
             })?.into_output(),
-            port_thruster: Thruster::new(pwm_channel, config)?,
-            starboard_thruster: Thruster::new(pwm_channel, config)?,
-            active_thruster: ActiveThruster::None,
+            pwm_pin: Pwm::with_frequency(
+                pwm_channel,
+                50000.0,
+                0.0,
+                Polarity::Normal,
+                true
+            ).map_err(|e| PeripheralInitError{
+                message: format!("Failed to get thruster pin as pwm: {}", e)
+            })?,
+            target_duty_cycle: 0.0,
+            active_thruster: YawThruster::None,
+            target_thruster: YawThruster::None,
         })
     }
 
-    pub fn set_port_thrust(&mut self, magnitude: f32) {
-        self.yaw_switch.set_high();
-        self.port_thruster.enable();
-        self.starboard_thruster.disable();
-
-        self.port_thruster.set_target_duty_cycle(magnitude);
-
-        if self.active_thruster != ActiveThruster::Port {
-            self.port_thruster.set_duty_cycle(0.0);
-            self.active_thruster = ActiveThruster::Port;
-        }
+    pub fn set_thruster(&mut self, thruster: YawThruster) {
+        self.target_thruster = thruster;
     }
 
-    pub fn set_starboard_thrust(&mut self, magnitude: f32) {
-        self.yaw_switch.set_low();
-        self.port_thruster.disable();
-        self.starboard_thruster.enable();
+    fn update(&mut self) {
+        let current_dc = self.pwm_pin.duty_cycle().unwrap();
+        let mut target_dc: f64 = 0.0;
 
-        self.starboard_thruster.set_target_duty_cycle(magnitude);
+        if self.active_thruster != self.target_thruster {
+            if current_dc < f64::EPSILON {
+                self.active_thruster = self.target_thruster;
+            }
+        } else {
+            target_dc = self.target_duty_cycle;
+        }
 
-        if self.active_thruster != ActiveThruster::Starboard {
-            self.starboard_thruster.set_duty_cycle(0.0);
-            self.active_thruster = ActiveThruster::Starboard;
+        self.pwm_pin.set_duty_cycle(super::compute_new_duty_cycle(
+            current_dc, target_dc
+        )).unwrap();
+
+        match self.active_thruster {
+            YawThruster::None => self.enable(false),
+            YawThruster::Port => {
+                self.enable(true);
+                self.yaw_switch_pin.set_high();
+            },
+            YawThruster::Starboard => {
+                self.enable(true);
+                self.yaw_switch_pin.set_low();
+            }
         }
     }
 
@@ -76,25 +96,35 @@ impl YawThrust {
         self.active_thruster.clone() as u8
     }
 
-    pub fn get_current_duty_cycle(&self) -> f32 {
-        self.port_thruster.get_current_duty_cycle()
+    pub fn get_current_duty_cycle(&self) -> f64 {
+        self.pwm_pin.duty_cycle().unwrap()
     }
 
-    pub fn get_target_duty_cycle(&self) -> f32 {
-        self.port_thruster.get_target_duty_cycle()
-    }
-
-    #[allow(dead_code)]
-    pub fn stop(&mut self) {
-        self.port_thruster.disable();
-        self.starboard_thruster.disable();
-        self.active_thruster = ActiveThruster::None;
+    pub fn get_target_duty_cycle(&self) -> f64 {
+        self.target_duty_cycle
     }
 }
 
-impl Tick for YawThrust {
-    fn tick(&mut self, tick_count: u32) {
-        self.port_thruster.tick(tick_count);
-        self.starboard_thruster.tick(tick_count);
+impl Tick for YawThrusterController {
+    fn tick(&mut self, _tick_count: u32) {
+        self.update()
+    }
+}
+
+impl ThrusterController for YawThrusterController {
+    fn set_duty_cycle(&mut self, duty_cycle: f64) {
+        self.target_duty_cycle = duty_cycle;
+    }
+
+    fn enable(&mut self, en: bool) {
+        if en {
+            self.pwm_pin.enable().unwrap();
+        } else {
+            self.pwm_pin.disable().unwrap();
+        }
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.pwm_pin.is_enabled().unwrap()
     }
 }

@@ -73,7 +73,7 @@ impl Telemetry {
                 TelemetryPacket::new(Box::new(PropulsionTelemetry::new()),
                     PROPULSION_PACKET_ID),
             ],
-            system: (SystemTelemetry::new(), SYSTEM_PACKET_ID, false),
+            system: (SystemTelemetry::new(), SYSTEM_PACKET_ID, true),
 
             emit_thread_handle: transmit_handle,
             emit_channel: channel,
@@ -89,8 +89,8 @@ impl Telemetry {
     }
 
     pub fn collect_hw_telemetry(&mut self, sub: &Submarine) {
-        self.hw_packet_list[0].enabled = false;
-        self.hw_packet_list[1].enabled = false;
+        //self.hw_packet_list[0].enabled = false;
+        //self.hw_packet_list[1].enabled = false;
         if !self.enabled
             || !self.emitter_ready.load(Ordering::SeqCst) { return; }
 
