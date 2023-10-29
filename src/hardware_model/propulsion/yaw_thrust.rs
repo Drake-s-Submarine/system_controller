@@ -1,4 +1,4 @@
-use super::ThrusterController;
+use super::{ ThrusterController, PwmStep };
 use rppal::{
     gpio::{ Gpio, OutputPin },
     pwm::{ Channel, Pwm, Polarity, }
@@ -22,6 +22,7 @@ pub struct YawThrusterController {
     target_duty_cycle: f64,
     active_thruster: YawThruster,
     target_thruster: YawThruster,
+    pwm_step: PwmStep,
 }
 
 impl YawThrusterController {
@@ -56,6 +57,7 @@ impl YawThrusterController {
             target_duty_cycle: 0.0,
             active_thruster: YawThruster::None,
             target_thruster: YawThruster::None,
+            pwm_step: PwmStep {up: config.thrust_step_up, down: config.thrust_step_down},
         })
     }
 
@@ -76,7 +78,7 @@ impl YawThrusterController {
         }
 
         self.pwm_pin.set_duty_cycle(super::compute_new_duty_cycle(
-            current_dc, target_dc
+            current_dc, target_dc, self.pwm_step.up, self.pwm_step.down
         )).unwrap();
 
         match self.active_thruster {

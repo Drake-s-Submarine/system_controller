@@ -1,4 +1,4 @@
-use super::ThrusterController;
+use super::{ ThrusterController, PwmStep };
 use rppal::pwm::{ Channel, Pwm, Polarity, };
 use crate::{
     traits::Tick,
@@ -9,10 +9,11 @@ use crate::{
 pub struct AftThrusterController {
     pwm_pin: Pwm,
     target_duty_cycle: f64,
+    pwm_step: PwmStep,
 }
 
 impl AftThrusterController {
-    pub fn new(pwm_channel: Channel, _config: &PropulsionConfig) -> Result<Self, PeripheralInitError> {
+    pub fn new(pwm_channel: Channel, config: &PropulsionConfig) -> Result<Self, PeripheralInitError> {
         Ok(Self {
             pwm_pin: Pwm::with_frequency(
                 pwm_channel,
@@ -24,6 +25,7 @@ impl AftThrusterController {
                 message: format!("Failed to get thruster pin as pwm: {}", e)
             })?,
             target_duty_cycle: 0.0,
+            pwm_step: PwmStep {up: config.thrust_step_up, down: config.thrust_step_down},
         })
     }
 
@@ -37,7 +39,7 @@ impl AftThrusterController {
         }
 
         self.pwm_pin.set_duty_cycle(super::compute_new_duty_cycle(
-            current_dc, self.target_duty_cycle
+            current_dc, self.target_duty_cycle, self.pwm_step.up, self.pwm_step.down
         )).unwrap();
     }
 

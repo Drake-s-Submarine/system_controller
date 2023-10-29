@@ -14,13 +14,15 @@ use crate::{
     definitions::DirectionVector,
 };
 
-const PWM_STEP_UP: f64 = 0.05;
-const PWM_STEP_DOWN: f64 = 0.25;
-
 pub struct Propulsion {
     yaw_thrust: YawThrusterController,
     aft_thrust: AftThrusterController,
     vector: DirectionVector,
+}
+
+struct PwmStep {
+    up: f64,
+    down: f64,
 }
 
 impl Propulsion {
@@ -105,18 +107,23 @@ trait ThrusterController {
     fn is_enabled(&self) -> bool;
 }
 
-fn compute_new_duty_cycle(current_dc: f64, target_dc: f64) -> f64 {
+fn compute_new_duty_cycle(
+    current_dc: f64,
+    target_dc: f64,
+    step_up: f64,
+    step_down: f64
+) -> f64 {
     let delta = target_dc - current_dc;
 
     if delta > 0.0 + f64::EPSILON {
-        let dc = current_dc + PWM_STEP_UP;
+        let dc = current_dc + step_up;
         if dc > target_dc {
             target_dc
         } else {
             dc
         }
     } else if delta < 0.0 - f64::EPSILON {
-        let dc = current_dc - PWM_STEP_DOWN;
+        let dc = current_dc - step_down;
         if dc < target_dc {
             target_dc
         } else {
