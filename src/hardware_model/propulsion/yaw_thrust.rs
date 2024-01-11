@@ -47,7 +47,7 @@ impl YawThrusterController {
             })?.into_output(),
             pwm_pin: Pwm::with_frequency(
                 pwm_channel,
-                50000.0,
+                50.0,
                 0.0,
                 Polarity::Normal,
                 true

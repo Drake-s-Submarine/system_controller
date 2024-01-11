@@ -9,5 +9,7 @@ pub struct PropulsionConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct PropulsionGpioConfig {
-    pub yaw_switch_pin: u8,
+    pub aft_pin: u8,
+    pub starboard_pin: u8,
+    pub port_pin: u8,
 }

@@ -1,11 +1,6 @@
-mod yaw_thrust;
-mod aft_thrust;
+mod thruster_controller;
 
-use yaw_thrust::{
-    YawThrusterController,
-    YawThruster,
-};
-use aft_thrust::AftThrusterController;
+use thruster_controller::ThrusterController;
 use crate::{
     traits::Tick,
     error::PeripheralInitError,
@@ -15,21 +10,18 @@ use crate::{
 };
 
 pub struct Propulsion {
-    yaw_thrust: YawThrusterController,
-    aft_thrust: AftThrusterController,
+    aft_thruster: ThrusterController,
+    starboard_thruster: ThrusterController,
+    port_thruster: ThrusterController,
     vector: DirectionVector,
-}
-
-struct PwmStep {
-    up: f64,
-    down: f64,
 }
 
 impl Propulsion {
     pub fn new(config: &PropulsionConfig) -> Result<Self, PeripheralInitError> {
         Ok(Self {
-            yaw_thrust: YawThrusterController::new(rppal::pwm::Channel::Pwm1, config)?,
-            aft_thrust: AftThrusterController::new(rppal::pwm::Channel::Pwm0, config)?,
+            aft_thruster: ThrusterController::new(config.gpio.aft_pin)?,
+            starboard_thruster: ThrusterController::new(config.gpio.starboard_pin)?,
+            port_thruster: ThrusterController::new(config.gpio.port_pin)?,
             vector: DirectionVector{x: 0.0, y: 0.0},
         })
     }
@@ -38,7 +30,6 @@ impl Propulsion {
         println!("{:?}", cmd);
 
         match cmd {
-            // TODO: check vec for sensical values
             PropulsionCommand::SetThrust(v) => {
                 self.vector.x = v.x.clamp(-1.0, 1.0);
                 self.vector.y = v.y.clamp(0.0, 1.0);
@@ -50,86 +41,38 @@ impl Propulsion {
         self.vector
     }
 
-    pub fn get_aft_duty_cycle(&self) -> f64 {
-        self.aft_thrust.get_current_duty_cycle()
+    pub fn get_aft_state(&self) -> bool {
+        self.aft_thruster.get_state()
+    }
+    pub fn get_sb_state(&self) -> bool {
+        self.starboard_thruster.get_state()
+    }
+    pub fn get_port_state(&self) -> bool {
+        self.port_thruster.get_state()
     }
 
-    pub fn get_aft_target_duty_cycle(&self) -> f64 {
-        self.aft_thrust.get_target_duty_cycle()
-    }
+    fn set_thruster_states(&mut self) {
+        let aft_en = self.vector.y > 0.3;
+        let sb_en = self.vector.x > 0.3;
+        let port_en = self.vector.x < -0.3;
 
-    pub fn get_yaw_duty_cycle(&self) -> f64 {
-        self.yaw_thrust.get_current_duty_cycle()
-    }
-
-    pub fn get_yaw_target_duty_cycle(&self) -> f64 {
-        self.yaw_thrust.get_target_duty_cycle()
-    }
-
-    pub fn get_active_yaw_thruster(&self) -> u8 {
-        self.yaw_thrust.get_active_thruster()
-    }
-
-    fn set_forward_thrust(&mut self) {
-        let magnitude = self.vector.y as f64;
-        self.aft_thrust.set_duty_cycle(magnitude);
-    }
-
-    fn set_yaw_thrust(&mut self) {
-        let mut magnitude = self.vector.x.abs() as f64;
-
-        if magnitude < f64::EPSILON {
-            magnitude = 0.0;
-            self.yaw_thrust.set_thruster(YawThruster::None);
-        } else if self.vector.x > 0.0 {
-            self.yaw_thrust.set_thruster(YawThruster::Starboard);
-        } else {
-            self.yaw_thrust.set_thruster(YawThruster::Port);
+        if sb_en && port_en {
+            // this shouldn't happen and I should probably do something
+            // TODO: handle this
         }
-
-        self.yaw_thrust.set_duty_cycle(magnitude);
+        
+        self.aft_thruster.enable(aft_en);
+        self.starboard_thruster.enable(sb_en);
+        self.port_thruster.enable(port_en);
     }
 }
 
 impl Tick for Propulsion {
     fn tick(&mut self, tick_count: u32) {
-        self.set_forward_thrust();
-        self.set_yaw_thrust();
+        self.set_thruster_states();
 
-        self.yaw_thrust.tick(tick_count);
-        self.aft_thrust.tick(tick_count);
-    }
-}
-
-trait ThrusterController {
-    fn set_duty_cycle(&mut self, duty_cycle: f64);
-    fn enable(&mut self, en: bool);
-    fn is_enabled(&self) -> bool;
-}
-
-fn compute_new_duty_cycle(
-    current_dc: f64,
-    target_dc: f64,
-    step_up: f64,
-    step_down: f64
-) -> f64 {
-    let delta = target_dc - current_dc;
-
-    if delta > 0.0 + f64::EPSILON {
-        let dc = current_dc + step_up;
-        if dc > target_dc {
-            target_dc
-        } else {
-            dc
-        }
-    } else if delta < 0.0 - f64::EPSILON {
-        let dc = current_dc - step_down;
-        if dc < target_dc {
-            target_dc
-        } else {
-            dc
-        }
-    } else {
-        target_dc
+        self.aft_thruster.tick(tick_count);
+        self.starboard_thruster.tick(tick_count);
+        self.port_thruster.tick(tick_count);
     }
 }
