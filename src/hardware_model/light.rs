@@ -1,10 +1,10 @@
 use rppal::gpio::{ OutputPin, Gpio };
 use crate::{
-    command::commands::LightCommand,
     config::hardware::light::LightConfig,
     error::PeripheralInitError,
     traits::Tick,
 };
+use common::commands::LightCommand;
 
 enum State {
     On,

@@ -4,10 +4,10 @@ use thruster_controller::ThrusterController;
 use crate::{
     traits::Tick,
     error::PeripheralInitError,
-    command::commands::PropulsionCommand,
     config::hardware::propulsion::PropulsionConfig,
     definitions::DirectionVector,
 };
+use common::commands::PropulsionCommand;
 
 pub struct Propulsion {
     aft_thruster: ThrusterController,

@@ -5,14 +5,9 @@ use super::{
     CommandDispatchWrapper,
     COMMAND_QUEUE,
     Module,
-    serde::{
-        MODULE_IDS,
-        COMMAND_BUFFER_SIZE,
-        validate_command_structure,
-        Serde,
-    },
-    commands::*,
 };
+use common::commands::*;
+use common::commands::serde::*;
 use std::mem::ManuallyDrop;
 
 pub async fn listen(socket: &str) {

@@ -1,27 +1,18 @@
-pub mod commands;
 mod dispatch;
 mod listen;
-mod serde;
 
 use std::collections::VecDeque;
 use std::sync::{ Arc, Mutex };
 use once_cell::sync::Lazy;
 use std::fs::remove_file;
-use commands::*;
 use crate::config::CommandingConfig;
+use common::commands::*;
 
 
 static COMMAND_QUEUE: Lazy<Arc<Mutex<VecDeque<CommandDispatchWrapper>>>> =
     Lazy::new(|| {
         Arc::new(Mutex::new(VecDeque::new()))
     });
-
-#[derive(Debug)]
-pub enum Module {
-    Ballast,
-    Light,
-    Propulsion,
-}
 
 struct CommandDispatchWrapper {
     module: Module,

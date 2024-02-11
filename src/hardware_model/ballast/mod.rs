@@ -2,10 +2,10 @@ use {
     crate::{
         error::PeripheralInitError,
         traits::Tick,
-        command::commands::BallastCommand,
         config::hardware::ballast::BallastConfig,
     },
     rppal::gpio::{ OutputPin, Gpio },
+    common::commands::BallastCommand,
 };
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
